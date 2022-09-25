@@ -1,0 +1,14 @@
+{
+    "MongoURI": "<MONGODB_URI>",
+    "Database": "<DATABASE_NAME>",
+    "TokenSecret": "<HASH_SALT_STRING>",
+    "RootAdmin": "<MASTER_ADMIN_NAME>",
+    "RootPassword": "<MASTER_ADMIN_PASSWORD>",
+    "RootEmail": "<MASTER_ADMIN_EMAIL>",
+    "RootGroup": "<MASTER_ADMIN_GROUP>",
+    "Registration": "<ON | OFF>",
+    "HTTPS": "off",
+    "Cert": "file/path/to/cert.pem",
+    "Key": "file/path/to/cert.pem",
+    "ENV": "<development | production | test>"
+}
