@@ -1,0 +1,14 @@
+{
+  "MongoURI": "mongodb+srv://localhost:1111",
+  "Database": "testing",
+  "TokenSecret": "TESTINGSALT",
+  "RootAdmin": "MasterAdmin",
+  "RootPassword": "321test123",
+  "RootEmail": "master@test.com",
+  "RootGroup": "MasterAdmins",
+  "Registration": "ON",
+  "HTTPS": "off",
+  "Cert": "",
+  "Key": "",
+  "ENV": "test"
+}
