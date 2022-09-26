@@ -24,7 +24,6 @@ func NewTaskRouter(router *mux.Router, a *services.TokenService, t services.Task
 	router.HandleFunc("/tasks", a.MemberTokenVerifyMiddleWare(gRouter.CreateTask)).Methods("POST")
 	router.HandleFunc("/tasks/{taskId}", utilities.HandleOptionsRequest).Methods("OPTIONS")
 	router.HandleFunc("/tasks/{taskId}", a.MemberTokenVerifyMiddleWare(gRouter.TaskShow)).Methods("GET")
-	router.HandleFunc("/tasks", a.MemberTokenVerifyMiddleWare(gRouter.CreateTask)).Methods("POST")
 	router.HandleFunc("/tasks/{taskId}", a.MemberTokenVerifyMiddleWare(gRouter.DeleteTask)).Methods("DELETE")
 	router.HandleFunc("/tasks/{taskId}", a.MemberTokenVerifyMiddleWare(gRouter.ModifyTask)).Methods("PATCH")
 	return router
