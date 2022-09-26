@@ -15,14 +15,12 @@ const (
 
 // dbRoutine struct to store executing thread ...
 type dbRoutine[T dbModel] struct {
-	out      T
-	err      error
-	oChannel chan T
-	eChannel chan error
-	handler  *DBHandler[T]
-	rType    routineType
-	filter   T
-	data     T
+	out     T
+	err     error
+	handler *DBHandler[T]
+	rType   routineType
+	filter  T
+	data    T
 }
 
 // execute a DB Routine by inputting a RoutineType, filter, and data
