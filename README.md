@@ -3,9 +3,7 @@
 A REST API Boilerplate written in Go.
 
 
-[![Build Status](https://travis-ci.org/JECSand/restful_api_boilerplate.svg?branch=master)](https://travis-ci.org/JECSand/restful_api_boilerplate)
-[![Go Report Card](https://goreportcard.com/badge/github.com/JECSand/restful_api_boilerplate)](https://goreportcard.com/report/github.com/JECSand/restful_api_boilerplate)
-
+[![Go Report Card](https://goreportcard.com/badge/github.com/JECSand/go-rest-api-boilerplate)](https://goreportcard.com/report/github.com/JECSand/go-rest-api-boilerplate)
 
 * Author(s): John Connor Sanders
 * Current Version: 0.0.1
