@@ -129,7 +129,7 @@ func (gr *taskRouter) TaskShow(w http.ResponseWriter, r *http.Request) {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: "missing taskId"})
 		return
 	}
-	task, err := gr.tService.TasksFind(&models.Task{Id: taskId})
+	task, err := gr.tService.TaskFind(&models.Task{Id: taskId})
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusNotFound, utilities.JWTError{Message: err.Error()})
 		return
