@@ -7,7 +7,8 @@
     "RootEmail": "<MASTER_ADMIN_EMAIL>",
     "RootGroup": "<MASTER_ADMIN_GROUP>",
     "Registration": "<ON | OFF>",
-    "HTTPS": "off",
+    "Port": "8081",
+    "HTTPS": "OFF",
     "Cert": "file/path/to/cert.pem",
     "Key": "file/path/to/cert.pem",
     "ENV": "<development | production | test>"

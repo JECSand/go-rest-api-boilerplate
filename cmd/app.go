@@ -22,11 +22,13 @@ type App struct {
 func (a *App) Initialize() error {
 	var err error
 	// 1) Initialize config settings & set environmental variables
-	conf, err := getConfigurations()
-	if err != nil {
-		return err
+	if os.Getenv("ENV") != "docker-dev" {
+		conf, err := getConfigurations()
+		if err != nil {
+			return err
+		}
+		conf.InitializeEnvironmentalVars()
 	}
-	conf.InitializeEnvironmentalVars()
 	// 2) Initialize & Connect DB Client
 	a.db, err = database.InitializeNewClient()
 	if err != nil {

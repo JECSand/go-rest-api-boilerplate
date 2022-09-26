@@ -15,6 +15,7 @@ type configuration struct {
 	RootEmail    string
 	RootGroup    string
 	Registration string
+	Port         string
 	HTTPS        string
 	Cert         string
 	Key          string
@@ -50,6 +51,7 @@ func (c *configuration) InitializeEnvironmentalVars() {
 	os.Setenv("ROOT_EMAIL", c.RootEmail)
 	os.Setenv("ROOT_GROUP", c.RootGroup)
 	os.Setenv("REGISTRATION", c.Registration)
+	os.Setenv("PORT", c.Port)
 	os.Setenv("HTTPS", c.HTTPS)
 	os.Setenv("CERT", c.Cert)
 	os.Setenv("KEY", c.Key)

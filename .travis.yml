@@ -1,0 +1,17 @@
+language: go
+
+go:
+  - "1.19"
+
+before_script:
+  - sleep 15
+  - go vet github.com/JECSand/go-rest-api-boilerplate
+
+install:
+  - go mod download
+
+script:
+  - go test github.com/JECSand/go-rest-api-boilerplate/auth
+  - go test github.com/JECSand/go-rest-api-boilerplate/database
+  - go test github.com/JECSand/go-rest-api-boilerplate/models
+  - go test github.com/JECSand/go-rest-api-boilerplate/cmd

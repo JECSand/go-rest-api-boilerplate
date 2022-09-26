@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - mongodb-container
+    ports:
+      - 8081:8081
+    networks:
+      - project
+    restart: always
+    environment:
+      MONGO_URI: mongodb://mongodb-container:27017
+      DATABASE: "testDB"
+      TOKEN_SECRET: "SECRET"
+      ROOT_ADMIN: "MasterAdmin"
+      ROOT_PASSWORD: "789xyz"
+      ROOT_EMAIL: "master@example.com"
+      ROOT_GROUP: "MasterAdmins"
+      REGISTRATION: "ON"
+      PORT: "8081"
+      HTTPS: "OFF"
+      CERT: ""
+      KEY: ""
+      ENV: docker-dev
+
+  mongodb-container:
+    image: mongo:latest
+    restart: always
+    ports:
+      - 27017:27017
+    networks:
+      - project
+    expose:
+      - 27017
+    volumes:
+      - mongodb_data_container:/data/db
+
+networks:
+  project:
+    driver: bridge
+
+volumes:
+  mongodb_data_container:
