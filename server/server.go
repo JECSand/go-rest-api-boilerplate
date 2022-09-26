@@ -36,9 +36,9 @@ func NewServer(u services.UserService, g services.GroupService, tt services.Task
 
 // Start starts the initialized Server
 func (s *Server) Start() {
-	log.Println("Listening on port 8080")
+	log.Println("Listening on port " + os.Getenv("PORT"))
 	go func() {
-		if err := http.ListenAndServe(":8080", handlers.LoggingHandler(os.Stdout, s.Router)); err != nil {
+		if err := http.ListenAndServe(":"+os.Getenv("PORT"), handlers.LoggingHandler(os.Stdout, s.Router)); err != nil {
 			log.Fatal("http.ListenAndServe: ", err)
 		}
 	}()

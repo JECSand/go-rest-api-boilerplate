@@ -7,7 +7,8 @@
   "RootEmail": "master@test.com",
   "RootGroup": "MasterAdmins",
   "Registration": "ON",
-  "HTTPS": "off",
+  "Port": "8081",
+  "HTTPS": "OFF",
   "Cert": "",
   "Key": "",
   "ENV": "test"
