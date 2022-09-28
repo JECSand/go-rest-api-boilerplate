@@ -176,7 +176,8 @@ ___
 {
   "firstname": "john",
   "lastname": "smith",
-  "email": "user@example.com"",
+  "email": "user@example.com",
+  "password": "789xyz",
   "username": "userName",
   "password": "userpass"
 }
@@ -359,7 +360,56 @@ ___
 ### II) Task Routes
 
 ___
-#### 1. List Task(s)
+#### 1. List Tasks
+* GET - /tasks
+
+##### Request
+
+***
+* Headers
+```
+{
+  Content-Type: application/json,
+  Auth-Token: ""
+}
+```
+
+##### Response
+
+***
+* Headers
+```
+{
+  Content-Type: application/json; charset=UTF-8,
+  Date: DoW, DD MMM YYYY HH:mm:SS GMT,
+  Content-Length: 0,
+  Access-Control-Allow-Headers: Content-Type, Auth-Token, API-Key,
+  Access-Control-Expose-Headers: Content-Type, Auth-Token, API-Key,
+  Access-Control-Allow-Origin: *,
+  Access-Control-Allow-Methods: GET,DELETE,POST,PATCH  
+}
+```
+
+* Body
+```
+{
+    "tasks": [
+        {
+            "id":  "000000000000000000000021",
+            "name": "todo_name",
+            "due": 2019-08-01 12:04:01 -0000 UTC,
+            "completed": false,
+            "description": "Task to complete",
+            "user_id": "000000000000000000000011",
+            "group_id": "000000000000000000000001",
+            "last_modified": 2019-06-07 20:28:09.400248747 +0000 UTC,
+            "created_at": 2019-06-07 20:28:09.400248747 +0000 UTC
+        }
+    ]
+}
+```
+
+#### 2. List Task
 * GET - /tasks/{taskId}
 * todoId parameter is optional, if used the request will only return an object for that item.
 
@@ -392,8 +442,7 @@ ___
 
 * Body
 ```
-[
-  {
+{
     "id":  "000000000000000000000021",
     "name": "todo_name",
     "due": 2019-08-01 12:04:01 -0000 UTC,
@@ -403,11 +452,10 @@ ___
     "group_id": "000000000000000000000001",
     "last_modified": 2019-06-07 20:28:09.400248747 +0000 UTC,
     "created_at": 2019-06-07 20:28:09.400248747 +0000 UTC
-  }
-]
+}
 ```
 
-#### 2. Create Task
+#### 3. Create Task
 * POST - /tasks
 
 ##### Request
@@ -464,8 +512,8 @@ ___
 }
 ```
 
-#### 3. Modify Todo
-* PATCH - /todos/{todoId}
+#### 4. Modify Task
+* PATCH - /tasks/{taskId}
 
 ##### Request
 
@@ -523,8 +571,8 @@ ___
 }
 ```
 
-#### 4. Delete Todo
-* DELETE - /todos/{todoId}
+#### 5. Delete Task
+* DELETE - /task/{taskId}
 
 ##### Request
 
@@ -558,9 +606,8 @@ ___
 ### III) Users Routes (Admins Only)
 
 ___
-#### 1. List User(s)
-* GET - /users/{userId}
-* userId parameter is optional, if used the request will only return an object for that item.
+#### 1. List Users
+* GET - /users
 
 ##### Request
 
@@ -593,23 +640,72 @@ ___
 
 * Body
 ```
-[
-  {
-    "id": "000000000000000000000011",
-    "username": "userName",
-    "firstname": "jane",
-    "lastname": "smith",
-    "email": "user@example.com",
-    "role": "member",
-    "group_id": "000000000000000000000001",
-    "last_modified": 2019-06-07 20:17:14.630917778 +0000 UTC,
-    "created_at": 2019-06-07 20:17:14.630917778 +0000 UTC
-  }
-]
+{
+    "users": [
+        {
+            "id": "000000000000000000000011",
+            "username": "userName",
+            "firstname": "jane",
+            "lastname": "smith",
+            "email": "user@example.com",
+            "role": "member",
+            "group_id": "000000000000000000000001",
+            "last_modified": 2019-06-07 20:17:14.630917778 +0000 UTC,
+            "created_at": 2019-06-07 20:17:14.630917778 +0000 UTC
+        }
+    ]
+}
+```
+
+#### 2. List User
+* GET - /users/{userId}
+
+##### Request
+
+***
+* Headers
+
+```
+{
+  Content-Type: application/json,
+  Auth-Token: ""
+}
+```
+
+##### Response
+
+***
+* Headers
+
+```
+{
+  Content-Type: application/json; charset=UTF-8,
+  Date: DoW, DD MMM YYYY HH:mm:SS GMT,
+  Content-Length: 0,
+  Access-Control-Allow-Headers: Content-Type, Auth-Token, API-Key,
+  Access-Control-Expose-Headers: Content-Type, Auth-Token, API-Key,
+  Access-Control-Allow-Origin: *,
+  Access-Control-Allow-Methods: GET,DELETE,POST,PATCH  
+}
+```
+
+* Body
+```
+{
+        "id": "000000000000000000000011",
+        "username": "userName",
+        "firstname": "jane",
+        "lastname": "smith",
+        "email": "user@example.com",
+        "role": "member",
+        "group_id": "000000000000000000000001",
+        "last_modified": 2019-06-07 20:17:14.630917778 +0000 UTC,
+        "created_at": 2019-06-07 20:17:14.630917778 +0000 UTC
+}
 ```
 
 
-#### 2. Create User
+#### 3. Create User
 * POST - /users
 
 ##### Request
@@ -670,7 +766,7 @@ ___
 }
 ```
 
-#### 3. Modify User
+#### 4. Modify User
 * PATCH - /users/{userId}
 
 ##### Request
@@ -733,7 +829,7 @@ ___
 ```
 
 
-#### 4. Delete User
+#### 5. Delete User
 * DELETE - /users/{userId}
 
 ##### Request
@@ -768,9 +864,8 @@ ___
 ### IV) User Group Routes (Admins Only)
 
 ___
-#### 1. List User Group(s)
-* GET - /groups/{groupId}
-* groupId parameter is optional, if used the request will only return an object for that item.
+#### 1. List User Groups
+* GET - /groups
 
 ##### Request
 
@@ -803,18 +898,62 @@ ___
 
 * Body
 ```
-[
-  {
-    "id": 000000000000000000000001,
+{
+    "groups": [
+        {
+            "id": "000000000000000000000001",
+            "name": "groupName",        
+            "last_modified": 2019-06-07 20:17:14.358617998 +0000 UTC,
+            "creation_datetime": 2019-06-07 20:17:14.358617998 +0000 UTC
+        }
+    ]
+}
+```
+
+#### 2. List User Group
+* GET - /groups/{groupId}
+
+##### Request
+
+***
+* Headers
+
+```
+{
+  Content-Type: application/json,
+  Auth-Token: ""
+}
+```
+
+##### Response
+
+***
+* Headers
+
+```
+{
+  Content-Type: application/json; charset=UTF-8,
+  Date: DoW, DD MMM YYYY HH:mm:SS GMT,
+  Content-Length: 0,
+  Access-Control-Allow-Headers: Content-Type, Auth-Token, API-Key,
+  Access-Control-Expose-Headers: Content-Type, Auth-Token, API-Key,
+  Access-Control-Allow-Origin: *,
+  Access-Control-Allow-Methods: GET,DELETE,POST,PATCH  
+}
+```
+
+* Body
+```
+{
+    "id": "000000000000000000000001",
     "name": "groupName",        
     "last_modified": 2019-06-07 20:17:14.358617998 +0000 UTC,
     "creation_datetime": 2019-06-07 20:17:14.358617998 +0000 UTC
-  }
-]
+}
 ```
 
 
-#### 2. Create User Group
+#### 3. Create User Group
 * POST - /groups
 
 ##### Request
@@ -864,7 +1003,7 @@ ___
 ```
 
 
-#### 3. Modify User Group
+#### 4. Modify User Group
 * PATCH - /groups/{groupId}
 
 ##### Request
@@ -913,7 +1052,7 @@ ___
 }
 ```
 
-#### 4. Delete User Group
+#### 5. Delete User Group
 * DELETE - /groups/{groupId}
 
 ##### Request

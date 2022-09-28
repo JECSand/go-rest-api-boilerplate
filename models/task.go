@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"github.com/JECSand/go-rest-api-boilerplate/utilities"
 	"strings"
 	"time"
 )
@@ -20,19 +21,30 @@ type Task struct {
 	DeletedAt    time.Time `json:"deleted_at,omitempty"`
 }
 
-// checkID determines whether a specified ID is set or not
-func (g *Task) checkID(chkId string) bool {
+// LoadScope scopes the Task struct
+func (g *Task) LoadScope(scopeUser *User) {
+	if !scopeUser.RootAdmin {
+		g.GroupId = scopeUser.GroupId
+		if scopeUser.Role != "admin" {
+			g.UserId = scopeUser.Id
+		}
+	}
+	return
+}
+
+// CheckID determines whether a specified ID is set or not
+func (g *Task) CheckID(chkId string) bool {
 	switch chkId {
 	case "id":
-		if g.Id == "" || g.Id == "000000000000000000000000" {
+		if !utilities.CheckObjectID(g.Id) {
 			return false
 		}
 	case "group_id":
-		if g.GroupId == "" || g.GroupId == "000000000000000000000000" {
+		if !utilities.CheckObjectID(g.GroupId) {
 			return false
 		}
 	case "user_id":
-		if g.UserId == "" || g.UserId == "000000000000000000000000" {
+		if !utilities.CheckObjectID(g.UserId) {
 			return false
 		}
 	}
@@ -47,17 +59,17 @@ func (g *Task) Validate(valCase string) (err error) {
 		if g.Name == "" {
 			missingFields = append(missingFields, "name")
 		}
-		if !g.checkID("user_id") {
+		if !g.CheckID("user_id") {
 			missingFields = append(missingFields, "user_id")
 		}
-		if !g.checkID("group_id") {
+		if !g.CheckID("group_id") {
 			missingFields = append(missingFields, "group_id")
 		}
 		if g.Due.IsZero() {
 			missingFields = append(missingFields, "due")
 		}
 	case "update":
-		if !g.checkID("id") {
+		if !g.CheckID("id") {
 			missingFields = append(missingFields, "id")
 		}
 	default:

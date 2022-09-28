@@ -42,9 +42,13 @@ func (p *GroupService) GroupCreate(g *models.Group) (*models.Group, error) {
 }
 
 // GroupsFind is used to find all group docs in a MongoDB Collection
-func (p *GroupService) GroupsFind() ([]*models.Group, error) {
+func (p *GroupService) GroupsFind(g *models.Group) ([]*models.Group, error) {
 	var groups []*models.Group
-	gms, err := p.handler.FindMany(&groupModel{})
+	m, err := newGroupModel(g)
+	if err != nil {
+		return groups, err
+	}
+	gms, err := p.handler.FindMany(m)
 	if err != nil {
 		return groups, err
 	}

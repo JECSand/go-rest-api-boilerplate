@@ -55,9 +55,11 @@ func (a *TokenService) tokenVerifyMiddleWare(roleType string, next http.HandlerF
 	}
 	verified, verifyMsg := a.verifyTokenUser(decodedToken)
 	if verified {
-		if roleType == "Admin" && decodedToken.Role == "admin" {
+		if roleType == "Root" && decodedToken.RootAdmin {
 			next.ServeHTTP(w, r)
-		} else if roleType != "Admin" {
+		} else if roleType == "Admin" && decodedToken.Role == "admin" {
+			next.ServeHTTP(w, r)
+		} else if roleType == "Member" {
 			next.ServeHTTP(w, r)
 		} else {
 			errorObject.Message = "Invalid Token"
@@ -82,6 +84,14 @@ func (a *TokenService) GenerateToken(u *models.User, tType string) (string, erro
 		return "", err
 	}
 	return tData.CreateToken(expDT)
+}
+
+// RootAdminTokenVerifyMiddleWare is used to verify that the requester is a valid admin
+func (a *TokenService) RootAdminTokenVerifyMiddleWare(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		a.tokenVerifyMiddleWare("Root", next, w, r)
+		return
+	}
 }
 
 // AdminTokenVerifyMiddleWare is used to verify that the requester is a valid admin

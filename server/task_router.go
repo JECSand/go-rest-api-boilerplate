@@ -31,26 +31,21 @@ func NewTaskRouter(router *mux.Router, a *services.TokenService, t services.Task
 
 // TasksShow returns all tasks to client
 func (gr *taskRouter) TasksShow(w http.ResponseWriter, r *http.Request) {
-	authToken := r.Header.Get("Auth-Token")
-	tokenData, err := auth.DecodeJWT(authToken)
+	var filter models.Task
+	userScope, err := auth.VerifyRequestScope(r)
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
 		return
 	}
-	var filter models.Task
-	if tokenData.Role == "admin" {
-		filter.GroupId = tokenData.GroupId
-	} else {
-		filter.UserId = tokenData.UserId
-	}
-	w = utilities.SetResponseHeaders(w, "", "")
-	w.WriteHeader(http.StatusOK)
+	filter.LoadScope(userScope)
 	tasks, err := gr.tService.TasksFind(&filter)
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusServiceUnavailable, utilities.JWTError{Message: err.Error()})
 		return
 	}
-	if err = json.NewEncoder(w).Encode(tasks); err != nil {
+	w = utilities.SetResponseHeaders(w, "", "")
+	w.WriteHeader(http.StatusOK)
+	if err = json.NewEncoder(w).Encode(&tasksDTO{Tasks: tasks}); err != nil {
 		return
 	}
 }
@@ -71,6 +66,12 @@ func (gr *taskRouter) CreateTask(w http.ResponseWriter, r *http.Request) {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: err.Error()})
 		return
 	}
+	userScope, err := auth.VerifyRequestScope(r)
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
+		return
+	}
+	task.LoadScope(userScope)
 	task.Id = utilities.GenerateObjectID()
 	g, err := gr.tService.TaskCreate(&task)
 	if err != nil {
@@ -89,7 +90,7 @@ func (gr *taskRouter) CreateTask(w http.ResponseWriter, r *http.Request) {
 func (gr *taskRouter) ModifyTask(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	taskId := vars["taskId"]
-	if taskId == "" || taskId == "000000000000000000000000" {
+	if !utilities.CheckObjectID(taskId) {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: "missing taskId"})
 		return
 	}
@@ -125,11 +126,19 @@ func (gr *taskRouter) ModifyTask(w http.ResponseWriter, r *http.Request) {
 func (gr *taskRouter) TaskShow(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	taskId := vars["taskId"]
-	if taskId == "" || taskId == "000000000000000000000000" {
+	if !utilities.CheckObjectID(taskId) {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: "missing taskId"})
 		return
 	}
-	task, err := gr.tService.TaskFind(&models.Task{Id: taskId})
+	var filter models.Task
+	userScope, err := auth.VerifyRequestScope(r)
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
+		return
+	}
+	filter.LoadScope(userScope)
+	filter.Id = taskId
+	task, err := gr.tService.TaskFind(&filter)
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusNotFound, utilities.JWTError{Message: err.Error()})
 		return
@@ -146,11 +155,19 @@ func (gr *taskRouter) TaskShow(w http.ResponseWriter, r *http.Request) {
 func (gr *taskRouter) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	taskId := vars["taskId"]
-	if taskId == "" || taskId == "000000000000000000000000" {
+	if !utilities.CheckObjectID(taskId) {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: "missing taskId"})
 		return
 	}
-	task, err := gr.tService.TaskDelete(&models.Task{Id: taskId})
+	var filter models.Task
+	userScope, err := auth.VerifyRequestScope(r)
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
+		return
+	}
+	filter.LoadScope(userScope)
+	filter.Id = taskId
+	task, err := gr.tService.TaskDelete(&filter)
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusNotFound, utilities.JWTError{Message: err.Error()})
 		return

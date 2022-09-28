@@ -23,6 +23,14 @@ func GenerateObjectID() string {
 	return newId.Hex()
 }
 
+// CheckObjectID checks whether a hexID is null or now
+func CheckObjectID(hexID string) bool {
+	if hexID == "" || hexID == "000000000000000000000000" {
+		return false
+	}
+	return true
+}
+
 // HandleOptionsRequest handles incoming OPTIONS request
 func HandleOptionsRequest(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")

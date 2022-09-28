@@ -2,7 +2,6 @@ package database
 
 import (
 	"errors"
-	"fmt"
 	"github.com/JECSand/go-rest-api-boilerplate/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -64,7 +63,6 @@ func (b *blacklistModel) match(doc interface{}) bool {
 	}
 	bm := blacklistModel{}
 	err = bson.Unmarshal(data, &bm)
-	fmt.Println("\nCHECK BLACKLIST MATCH: ", bm, b)
 	if b.Id == bm.Id {
 		return true
 	}
