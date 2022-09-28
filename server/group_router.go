@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"github.com/JECSand/go-rest-api-boilerplate/auth"
 	"github.com/JECSand/go-rest-api-boilerplate/models"
 	"github.com/JECSand/go-rest-api-boilerplate/services"
 	"github.com/JECSand/go-rest-api-boilerplate/utilities"
@@ -20,11 +21,10 @@ func NewGroupRouter(router *mux.Router, a *services.TokenService, g services.Gro
 	gRouter := groupRouter{a, g}
 	router.HandleFunc("/groups", utilities.HandleOptionsRequest).Methods("OPTIONS")
 	router.HandleFunc("/groups", a.AdminTokenVerifyMiddleWare(gRouter.GroupsShow)).Methods("GET")
-	router.HandleFunc("/groups", a.AdminTokenVerifyMiddleWare(gRouter.CreateGroup)).Methods("POST")
+	router.HandleFunc("/groups", a.RootAdminTokenVerifyMiddleWare(gRouter.CreateGroup)).Methods("POST")
 	router.HandleFunc("/groups/{groupId}", utilities.HandleOptionsRequest).Methods("OPTIONS")
 	router.HandleFunc("/groups/{groupId}", a.AdminTokenVerifyMiddleWare(gRouter.GroupShow)).Methods("GET")
-	router.HandleFunc("/groups", a.AdminTokenVerifyMiddleWare(gRouter.CreateGroup)).Methods("POST")
-	router.HandleFunc("/groups/{groupId}", a.AdminTokenVerifyMiddleWare(gRouter.DeleteGroup)).Methods("DELETE")
+	router.HandleFunc("/groups/{groupId}", a.RootAdminTokenVerifyMiddleWare(gRouter.DeleteGroup)).Methods("DELETE")
 	router.HandleFunc("/groups/{groupId}", a.AdminTokenVerifyMiddleWare(gRouter.ModifyGroup)).Methods("PATCH")
 	return router
 }
@@ -32,13 +32,18 @@ func NewGroupRouter(router *mux.Router, a *services.TokenService, g services.Gro
 // GroupsShow returns all groups to client
 func (gr *groupRouter) GroupsShow(w http.ResponseWriter, r *http.Request) {
 	w = utilities.SetResponseHeaders(w, "", "")
-	w.WriteHeader(http.StatusOK)
-	groups, err := gr.gService.GroupsFind()
+	tokenData, err := auth.LoadTokenFromRequest(r)
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
+		return
+	}
+	groups, err := gr.gService.GroupsFind(tokenData.GetGroupsScope())
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusServiceUnavailable, utilities.JWTError{Message: err.Error()})
 		return
 	}
-	if err = json.NewEncoder(w).Encode(groups); err != nil {
+	w.WriteHeader(http.StatusOK)
+	if err = json.NewEncoder(w).Encode(&groupsDTO{Groups: groups}); err != nil {
 		return
 	}
 }
@@ -78,7 +83,7 @@ func (gr *groupRouter) CreateGroup(w http.ResponseWriter, r *http.Request) {
 func (gr *groupRouter) ModifyGroup(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	groupId := vars["groupId"]
-	if groupId == "" || groupId == "000000000000000000000000" {
+	if !utilities.CheckObjectID(groupId) {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: "missing groupId"})
 		return
 	}
@@ -94,6 +99,11 @@ func (gr *groupRouter) ModifyGroup(w http.ResponseWriter, r *http.Request) {
 	}
 	if err = json.Unmarshal(body, &group); err != nil {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: err.Error()})
+		return
+	}
+	groupId, err = auth.VerifyGroupRequestScope(r, groupId)
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
 		return
 	}
 	group.Id = groupId
@@ -113,9 +123,15 @@ func (gr *groupRouter) ModifyGroup(w http.ResponseWriter, r *http.Request) {
 // GroupShow shows a specific group
 func (gr *groupRouter) GroupShow(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
+	var err error
 	groupId := vars["groupId"]
-	if groupId == "" || groupId == "000000000000000000000000" {
+	if !utilities.CheckObjectID(groupId) {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: "missing groupId"})
+		return
+	}
+	groupId, err = auth.VerifyGroupRequestScope(r, groupId)
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
 		return
 	}
 	group, err := gr.gService.GroupFind(&models.Group{Id: groupId})
@@ -135,7 +151,7 @@ func (gr *groupRouter) GroupShow(w http.ResponseWriter, r *http.Request) {
 func (gr *groupRouter) DeleteGroup(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	groupId := vars["groupId"]
-	if groupId == "" || groupId == "000000000000000000000000" {
+	if !utilities.CheckObjectID(groupId) {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: "missing groupId"})
 		return
 	}

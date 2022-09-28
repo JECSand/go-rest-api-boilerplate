@@ -2,11 +2,9 @@ package database
 
 import (
 	"context"
-	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"log"
 	"os"
 	"sync"
 	"time"
@@ -82,8 +80,6 @@ func InitializeNewClient() (DBClient, error) {
 
 // InitializeNewClient is a function that takes a mongoUri string and outputs a connected mongo client for the app to use
 func initializeNewClient() (*dbClient, error) {
-	fmt.Println("\n-----CHECK MONGO URI: ", os.Getenv("MONGO_URI"))
-	log.Println("\n-----CHECK MONGO URI: ", os.Getenv("MONGO_URI"))
 	newDBClient := dbClient{connectionURI: os.Getenv("MONGO_URI")}
 	var err error
 	newDBClient.client, err = mongo.NewClient(options.Client().ApplyURI(newDBClient.connectionURI))
@@ -94,16 +90,14 @@ func initializeNewClient() (*dbClient, error) {
 func (db *dbClient) Connect() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	err := db.client.Connect(ctx)
-	return err
+	return db.client.Connect(ctx)
 }
 
 // Close closes an open DB connection
 func (db *dbClient) Close() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	err := db.client.Disconnect(ctx)
-	return err
+	return db.client.Disconnect(ctx)
 }
 
 // GetCollection returns a mongo collection based on the input collection name

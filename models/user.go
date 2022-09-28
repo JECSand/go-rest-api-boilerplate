@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"github.com/JECSand/go-rest-api-boilerplate/utilities"
 	"golang.org/x/crypto/bcrypt"
 	"strings"
 	"time"
@@ -23,15 +24,43 @@ type User struct {
 	DeletedAt    time.Time `json:"deleted_at,omitempty"`
 }
 
-// checkID determines whether a specified ID is set or not
-func (g *User) checkID(chkId string) bool {
+// LoadScope scopes the User struct
+func (g *User) LoadScope(scopeUser *User, valCase string) {
+	switch valCase {
+	case "create":
+		if !scopeUser.RootAdmin {
+			g.RootAdmin = false
+			g.GroupId = scopeUser.GroupId
+		}
+	case "update":
+		g.Id = scopeUser.Id
+		if !scopeUser.RootAdmin {
+			g.RootAdmin = false
+			g.GroupId = scopeUser.GroupId
+			if scopeUser.Role != "admin" {
+				g.Role = "member"
+			}
+		}
+	case "find":
+		if !scopeUser.RootAdmin {
+			g.GroupId = scopeUser.GroupId
+			if scopeUser.Role != "admin" {
+				g.Id = scopeUser.Id
+			}
+		}
+	}
+	return
+}
+
+// CheckID determines whether a specified ID is set or not
+func (g *User) CheckID(chkId string) bool {
 	switch chkId {
 	case "id":
-		if g.Id == "" || g.Id == "000000000000000000000000" {
+		if !utilities.CheckObjectID(g.Id) {
 			return false
 		}
 	case "group_id":
-		if g.GroupId == "" || g.GroupId == "000000000000000000000000" {
+		if !utilities.CheckObjectID(g.GroupId) {
 			return false
 		}
 	}
@@ -67,10 +96,10 @@ func (g *User) Validate(valCase string) (err error) {
 	var missingFields []string
 	switch valCase {
 	case "auth":
-		if !g.checkID("id") {
+		if !g.CheckID("id") {
 			missingFields = append(missingFields, "id")
 		}
-		if !g.checkID("group_id") {
+		if !g.CheckID("group_id") {
 			missingFields = append(missingFields, "group_id")
 		}
 		if g.Role == "" {
@@ -86,11 +115,11 @@ func (g *User) Validate(valCase string) (err error) {
 		if g.Password == "" {
 			missingFields = append(missingFields, "password")
 		}
-		if !g.checkID("group_id") {
+		if !g.CheckID("group_id") {
 			missingFields = append(missingFields, "group_id")
 		}
 	case "update":
-		if !g.checkID("id") && g.Email == "" {
+		if !g.CheckID("id") && g.Email == "" {
 			missingFields = append(missingFields, "id")
 		}
 	default:
@@ -105,7 +134,7 @@ func (g *User) Validate(valCase string) (err error) {
 // BuildFilter is a function that setups the base user struct during a user modification request
 func (g *User) BuildFilter() (*User, error) {
 	var filter User
-	if g.checkID("id") {
+	if g.CheckID("id") {
 		filter.Id = g.Id
 	} else if g.Email != "" {
 		filter.Email = g.Email

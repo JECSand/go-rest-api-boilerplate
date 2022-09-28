@@ -57,11 +57,7 @@ func (ur *userRouter) UpdatePassword(w http.ResponseWriter, r *http.Request) {
 		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
 		return
 	}
-	type passwordStruct struct {
-		NewPassword     string `json:"new_password"`
-		CurrentPassword string `json:"current_password"`
-	}
-	var pw passwordStruct
+	var pw updatePassword
 	err = json.Unmarshal(body, &pw)
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: err.Error()})
@@ -87,7 +83,7 @@ func (ur *userRouter) UpdatePassword(w http.ResponseWriter, r *http.Request) {
 func (ur *userRouter) ModifyUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userId := vars["userId"]
-	if userId == "" || userId == "000000000000000000000000" {
+	if !utilities.CheckObjectID(userId) {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: "missing userId"})
 		return
 	}
@@ -106,16 +102,12 @@ func (ur *userRouter) ModifyUser(w http.ResponseWriter, r *http.Request) {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: err.Error()})
 		return
 	}
-	decodedToken, err := auth.DecodeJWT(r.Header.Get("Auth-Token"))
+	userScope, err := auth.VerifyUserRequestScope(r, userId)
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
 		return
 	}
-	groupId := decodedToken.AdminRouteRoleCheck()
-	if groupId != "" { // Force Scope the groupId to the groupId of the Token if user is not RootAdmin
-		user.GroupId = groupId
-		user.RootAdmin = false
-	}
+	user.LoadScope(userScope, "update")
 	u, err := ur.uService.UserUpdate(&user)
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: err.Error()})
@@ -132,7 +124,7 @@ func (ur *userRouter) ModifyUser(w http.ResponseWriter, r *http.Request) {
 
 // SignIn is the handler function that manages the user SignIn process
 func (ur *userRouter) SignIn(w http.ResponseWriter, r *http.Request) {
-	var user models.User
+	var dto userSignIn
 	body, err := io.ReadAll(io.LimitReader(r.Body, 1048576))
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: err.Error()})
@@ -142,11 +134,16 @@ func (ur *userRouter) SignIn(w http.ResponseWriter, r *http.Request) {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: err.Error()})
 		return
 	}
-	if err = json.Unmarshal(body, &user); err != nil {
+	if err = json.Unmarshal(body, &dto); err != nil {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: err.Error()})
 		return
 	}
-	u, err := ur.uService.AuthenticateUser(&user)
+	user, err := dto.toUser()
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: err.Error()})
+		return
+	}
+	u, err := ur.uService.AuthenticateUser(user)
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
 		return
@@ -300,11 +297,8 @@ func (ur *userRouter) CreateUser(w http.ResponseWriter, r *http.Request) {
 		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
 		return
 	}
-	groupId := decodedToken.AdminRouteRoleCheck()
-	if groupId != "" { // Force Scope the groupId to the groupId of the Token if user is not RootAdmin
-		user.GroupId = groupId
-		user.RootAdmin = false
-	}
+	userScope := decodedToken.GetUsersScope()
+	user.LoadScope(userScope, "create")
 	u, err := ur.uService.UserCreate(&user)
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: err.Error()})
@@ -327,15 +321,19 @@ func (ur *userRouter) UsersShow(w http.ResponseWriter, r *http.Request) {
 		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
 		return
 	}
-	groupId := decodedToken.AdminRouteRoleCheck()
-	w = utilities.SetResponseHeaders(w, "", "")
-	w.WriteHeader(http.StatusOK)
-	users, err := ur.uService.UsersFind(&models.User{GroupId: groupId})
+	var filter models.User
+	userScope := decodedToken.GetUsersScope()
+	filter.LoadScope(userScope, "find")
+	users, err := ur.uService.UsersFind(&filter)
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: err.Error()})
 		return
 	}
-	if err = json.NewEncoder(w).Encode(users); err != nil {
+	dto := usersDTO{Users: users}
+	dto.clean()
+	w = utilities.SetResponseHeaders(w, "", "")
+	w.WriteHeader(http.StatusOK)
+	if err = json.NewEncoder(w).Encode(dto); err != nil {
 		return
 	}
 	return
@@ -345,17 +343,18 @@ func (ur *userRouter) UsersShow(w http.ResponseWriter, r *http.Request) {
 func (ur *userRouter) UserShow(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userId := vars["userId"]
-	if userId == "" || userId == "000000000000000000000000" {
+	if !utilities.CheckObjectID(userId) {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: "missing userId"})
 		return
 	}
-	decodedToken, err := auth.DecodeJWT(r.Header.Get("Auth-Token"))
+	filter := models.User{Id: userId}
+	userScope, err := auth.VerifyUserRequestScope(r, userId)
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
 		return
 	}
-	groupId := decodedToken.AdminRouteRoleCheck()
-	user, err := ur.uService.UserFind(&models.User{Id: userId, GroupId: groupId})
+	filter.LoadScope(userScope, "find")
+	user, err := ur.uService.UserFind(&filter)
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusNotFound, utilities.JWTError{Message: err.Error()})
 		return
@@ -373,17 +372,18 @@ func (ur *userRouter) UserShow(w http.ResponseWriter, r *http.Request) {
 func (ur *userRouter) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userId := vars["userId"]
-	if userId == "" || userId == "000000000000000000000000" {
+	if !utilities.CheckObjectID(userId) {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: "missing userId"})
 		return
 	}
-	decodedToken, err := auth.DecodeJWT(r.Header.Get("Auth-Token"))
+	filter := models.User{Id: userId}
+	userScope, err := auth.VerifyUserRequestScope(r, userId)
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
 		return
 	}
-	groupId := decodedToken.AdminRouteRoleCheck()
-	user, err := ur.uService.UserDelete(&models.User{Id: userId, GroupId: groupId})
+	filter.LoadScope(userScope, "find")
+	user, err := ur.uService.UserDelete(&filter)
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusNotFound, utilities.JWTError{Message: err.Error()})
 		return

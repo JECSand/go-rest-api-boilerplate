@@ -6,7 +6,7 @@ import "github.com/JECSand/go-rest-api-boilerplate/models"
 type GroupService interface {
 	GroupCreate(g *models.Group) (*models.Group, error)
 	GroupFind(g *models.Group) (*models.Group, error)
-	GroupsFind() ([]*models.Group, error)
+	GroupsFind(g *models.Group) ([]*models.Group, error)
 	GroupDelete(g *models.Group) (*models.Group, error)
 	GroupUpdate(g *models.Group) (*models.Group, error)
 	GroupDocInsert(g *models.Group) (*models.Group, error)

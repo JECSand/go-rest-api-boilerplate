@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"github.com/JECSand/go-rest-api-boilerplate/utilities"
 	"strings"
 	"time"
 )
@@ -16,11 +17,11 @@ type Group struct {
 	DeletedAt    time.Time `json:"deleted_at,omitempty"`
 }
 
-// checkID determines whether a specified ID is set or not
-func (g *Group) checkID(chkId string) bool {
+// CheckID determines whether a specified ID is set or not
+func (g *Group) CheckID(chkId string) bool {
 	switch chkId {
 	case "id":
-		if g.Id == "" || g.Id == "000000000000000000000000" {
+		if !utilities.CheckObjectID(g.Id) {
 			return false
 		}
 	}
@@ -36,7 +37,7 @@ func (g *Group) Validate(valCase string) (err error) {
 			missingFields = append(missingFields, "name")
 		}
 	case "update":
-		if !g.checkID("id") {
+		if !g.CheckID("id") {
 			missingFields = append(missingFields, "id")
 		}
 	default:

@@ -71,19 +71,21 @@ func Test_GroupsFind(t *testing.T) {
 		name    string // The name of the test
 		want    int    // What out instance we want our function to return.
 		wantErr bool   // whether we want an error.
+		group   *models.Group
 	}{
 		// Here we're declaring each unit test input and output data as defined before
 		{
 			"success",
 			2,
 			false,
+			&models.Group{},
 		},
 	}
 	// Iterating over the previous test slice
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			testService := setupTestGroups()
-			got, err := testService.GroupsFind()
+			got, err := testService.GroupsFind(tt.group)
 			// Checking the error
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GroupService.GroupsFind() error = %v, wantErr %v", err, tt.wantErr)
