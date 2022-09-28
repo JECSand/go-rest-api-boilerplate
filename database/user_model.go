@@ -19,6 +19,7 @@ type userModel struct {
 	Role         string             `bson:"role,omitempty"`
 	RootAdmin    bool               `bson:"root_admin,omitempty"`
 	GroupId      primitive.ObjectID `bson:"group_id,omitempty"`
+	ImageId      primitive.ObjectID `bson:"image_id,omitempty"`
 	LastModified time.Time          `bson:"last_modified,omitempty"`
 	CreatedAt    time.Time          `bson:"created_at,omitempty"`
 	DeletedAt    time.Time          `bson:"deleted_at,omitempty"`
@@ -43,6 +44,9 @@ func newUserModel(u *models.User) (um *userModel, err error) {
 	}
 	if u.GroupId != "" && u.GroupId != "000000000000000000000000" {
 		um.GroupId, err = primitive.ObjectIDFromHex(u.GroupId)
+	}
+	if u.ImageId != "" && u.ImageId != "000000000000000000000000" {
+		um.ImageId, err = primitive.ObjectIDFromHex(u.ImageId)
 	}
 	return
 }
@@ -72,6 +76,9 @@ func (u *userModel) update(doc interface{}) (err error) {
 	}
 	if len(um.GroupId.Hex()) > 0 && um.GroupId.Hex() != "000000000000000000000000" {
 		u.GroupId = um.GroupId
+	}
+	if len(um.ImageId.Hex()) > 0 && um.ImageId.Hex() != "000000000000000000000000" {
+		u.ImageId = um.ImageId
 	}
 	if len(um.Role) > 0 {
 		u.Role = um.Role
@@ -197,6 +204,7 @@ func (u *userModel) toRoot() *models.User {
 		Role:         u.Role,
 		RootAdmin:    u.RootAdmin,
 		GroupId:      u.GroupId.Hex(),
+		ImageId:      u.ImageId.Hex(),
 		LastModified: u.LastModified,
 		CreatedAt:    u.CreatedAt,
 		DeletedAt:    u.DeletedAt,

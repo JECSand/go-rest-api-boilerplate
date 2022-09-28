@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/gridfs"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"go.mongodb.org/mongo-driver/x/bsonx"
@@ -1051,6 +1052,14 @@ func (db *testDBClient) Close() error {
 	return err
 }
 
+// GetBucket returns a mongo collection based on the input collection name // todo for adding GridFS testing
+func (db *testDBClient) GetBucket(bucketName string) (*gridfs.Bucket, error) {
+	if bucketName == "" {
+		return nil, errors.New("bucketName cannot be empty")
+	}
+	return nil, nil
+}
+
 // GetCollection returns a mongo collection based on the input collection name
 func (db *testDBClient) GetCollection(collectionName string) DBCollection {
 	return db.client.Database("test").Collection(collectionName)
@@ -1096,6 +1105,15 @@ func (db *testDBClient) NewBlacklistHandler() *DBHandler[*blacklistModel] {
 func (db *testDBClient) NewTaskHandler() *DBHandler[*taskModel] {
 	col := db.GetCollection("tasks")
 	return &DBHandler[*taskModel]{
+		db:         db,
+		collection: col,
+	}
+}
+
+// NewFileHandler returns a new DBHandler files interface
+func (db *testDBClient) NewFileHandler() *DBHandler[*fileModel] {
+	col := db.GetCollection("files")
+	return &DBHandler[*fileModel]{
 		db:         db,
 		collection: col,
 	}

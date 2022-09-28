@@ -43,11 +43,13 @@ func (a *App) Initialize() error {
 	uHandler := a.db.NewUserHandler()
 	blHandler := a.db.NewBlacklistHandler()
 	tHandler := a.db.NewTaskHandler()
+	fHandler := a.db.NewFileHandler()
 	gService := database.NewGroupService(a.db, gHandler)
 	uService := database.NewUserService(a.db, uHandler, gHandler)
 	bService := database.NewBlacklistService(a.db, blHandler)
 	tService := services.NewTokenService(uService, gService, bService)
 	ttService := database.NewTaskService(a.db, tHandler, uHandler, gHandler)
+	fService := database.NewFileService(a.db, fHandler, uHandler, gHandler)
 	// 4) Create RootAdmin user if database is empty
 	var group models.Group
 	var adminUser models.User
@@ -77,7 +79,7 @@ func (a *App) Initialize() error {
 		}
 	}
 	// 5) Initialize Server
-	a.server = server.NewServer(uService, gService, ttService, tService)
+	a.server = server.NewServer(uService, gService, ttService, fService, tService)
 	return nil
 }
 

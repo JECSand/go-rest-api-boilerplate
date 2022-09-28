@@ -19,6 +19,7 @@ type User struct {
 	Role         string    `json:"role,omitempty"`
 	RootAdmin    bool      `json:"root_admin,omitempty"`
 	GroupId      string    `json:"group_id,omitempty"`
+	ImageId      string    `json:"image_id,omitempty"`
 	LastModified time.Time `json:"last_modified,omitempty"`
 	CreatedAt    time.Time `json:"created_at,omitempty"`
 	DeletedAt    time.Time `json:"deleted_at,omitempty"`
@@ -61,6 +62,10 @@ func (g *User) CheckID(chkId string) bool {
 		}
 	case "group_id":
 		if !utilities.CheckObjectID(g.GroupId) {
+			return false
+		}
+	case "image_id":
+		if !utilities.CheckObjectID(g.ImageId) {
 			return false
 		}
 	}
@@ -160,6 +165,9 @@ func (g *User) BuildUpdate(curUser *User) {
 	}
 	if len(g.GroupId) == 0 {
 		g.GroupId = curUser.GroupId
+	}
+	if len(g.ImageId) == 0 {
+		g.ImageId = curUser.ImageId
 	}
 	if len(g.Role) == 0 {
 		g.Role = curUser.Role

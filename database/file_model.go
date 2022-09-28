@@ -8,27 +8,31 @@ import (
 	"time"
 )
 
-// taskModel structures a group BSON document to save in a users collection
-type taskModel struct {
+// fileModel structures a file BSON document associated with a GridFS Object to save in a files collection
+type fileModel struct {
 	Id           primitive.ObjectID `bson:"_id,omitempty"`
+	OwnerId      primitive.ObjectID `bson:"owner_id,omitempty"`
+	OwnerType    string             `bson:"owner_type,omitempty"`
+	GridFSId     primitive.ObjectID `bson:"gridfs_id,omitempty"`
+	BucketName   string             `bson:"bucket_name,omitempty"`
+	BucketType   string             `bson:"bucket_type,omitempty"`
 	Name         string             `bson:"name,omitempty"`
-	Completed    bool               `bson:"completed,omitempty"`
-	Due          time.Time          `bson:"due,omitempty"`
-	Description  string             `bson:"description,omitempty"`
-	UserId       primitive.ObjectID `bson:"user_id,omitempty"`
-	GroupId      primitive.ObjectID `bson:"group_id,omitempty"`
+	FileType     string             `bson:"file_type,omitempty"`
+	Size         int                `bson:"size,omitempty"`
 	LastModified time.Time          `bson:"last_modified,omitempty"`
 	CreatedAt    time.Time          `bson:"created_at,omitempty"`
 	DeletedAt    time.Time          `bson:"deleted_at,omitempty"`
 }
 
-// newTaskModel initializes a new pointer to a userModel struct from a pointer to a JSON User struct
-func newTaskModel(u *models.Task) (um *taskModel, err error) {
-	um = &taskModel{
+// newFileModel initializes a new pointer to a fileModel struct from a pointer to a JSON User struct
+func newFileModel(u *models.File) (um *fileModel, err error) {
+	um = &fileModel{
+		OwnerType:    u.OwnerType,
+		BucketName:   u.BucketName,
+		BucketType:   u.BucketType,
 		Name:         u.Name,
-		Completed:    u.Completed,
-		Due:          u.Due,
-		Description:  u.Description,
+		FileType:     u.FileType,
+		Size:         u.Size,
 		LastModified: u.LastModified,
 		CreatedAt:    u.CreatedAt,
 		DeletedAt:    u.DeletedAt,
@@ -36,40 +40,40 @@ func newTaskModel(u *models.Task) (um *taskModel, err error) {
 	if u.Id != "" && u.Id != "000000000000000000000000" {
 		um.Id, err = primitive.ObjectIDFromHex(u.Id)
 	}
-	if u.GroupId != "" && u.GroupId != "000000000000000000000000" {
-		um.GroupId, err = primitive.ObjectIDFromHex(u.GroupId)
+	if u.OwnerId != "" && u.OwnerId != "000000000000000000000000" {
+		um.OwnerId, err = primitive.ObjectIDFromHex(u.OwnerId)
 	}
-	if u.UserId != "" && u.UserId != "000000000000000000000000" {
-		um.UserId, err = primitive.ObjectIDFromHex(u.UserId)
+	if u.GridFSId != "" && u.GridFSId != "000000000000000000000000" {
+		um.GridFSId, err = primitive.ObjectIDFromHex(u.GridFSId)
 	}
 	return
 }
 
 // update the userModel using an overwrite bson.D doc
-func (u *taskModel) update(doc interface{}) (err error) {
+func (u *fileModel) update(doc interface{}) (err error) {
 	data, err := bsonMarshall(doc)
 	if err != nil {
 		return
 	}
-	um := taskModel{}
+	um := fileModel{}
 	err = bson.Unmarshal(data, &um)
 	if len(um.Name) > 0 {
 		u.Name = um.Name
 	}
-	if um.Completed {
-		u.Completed = um.Completed
+	if len(um.BucketName) > 0 {
+		u.BucketName = um.BucketName
 	}
-	if !um.Due.IsZero() {
-		u.Due = um.Due
+	if len(um.BucketType) > 0 {
+		u.BucketType = um.BucketType
 	}
-	if len(um.Description) > 0 {
-		u.Description = um.Description
+	if um.Size > 0 {
+		u.Size = um.Size
 	}
-	if len(um.UserId.Hex()) > 0 && um.UserId.Hex() != "000000000000000000000000" {
-		u.UserId = um.UserId
+	if len(um.OwnerId.Hex()) > 0 && um.OwnerId.Hex() != "000000000000000000000000" {
+		u.OwnerId = um.OwnerId
 	}
-	if len(um.GroupId.Hex()) > 0 && um.GroupId.Hex() != "000000000000000000000000" {
-		u.GroupId = um.GroupId
+	if len(um.GridFSId.Hex()) > 0 && um.GridFSId.Hex() != "000000000000000000000000" {
+		u.GridFSId = um.GridFSId
 	}
 	if !um.LastModified.IsZero() {
 		u.LastModified = um.LastModified
@@ -78,7 +82,7 @@ func (u *taskModel) update(doc interface{}) (err error) {
 }
 
 // bsonLoad loads a bson doc into the userModel
-func (u *taskModel) bsonLoad(doc bson.D) (err error) {
+func (u *fileModel) bsonLoad(doc bson.D) (err error) {
 	bData, err := bsonMarshall(doc)
 	if err != nil {
 		return err
@@ -89,12 +93,12 @@ func (u *taskModel) bsonLoad(doc bson.D) (err error) {
 
 // match compares an input bson doc and returns whether there's a match with the userModel
 // TODO: Find a better way to write these model match methods
-func (u *taskModel) match(doc interface{}) bool {
+func (u *fileModel) match(doc interface{}) bool {
 	data, err := bsonMarshall(doc)
 	if err != nil {
 		return false
 	}
-	um := taskModel{}
+	um := fileModel{}
 	err = bson.Unmarshal(data, &um)
 	if um.Id.Hex() != "" && um.Id.Hex() != "000000000000000000000000" {
 		if u.Id == um.Id {
@@ -102,14 +106,14 @@ func (u *taskModel) match(doc interface{}) bool {
 		}
 		return false
 	}
-	if um.UserId.Hex() != "" && um.UserId.Hex() != "000000000000000000000000" {
-		if u.UserId == um.UserId {
+	if um.OwnerId.Hex() != "" && um.OwnerId.Hex() != "000000000000000000000000" {
+		if u.OwnerId == um.OwnerId {
 			return true
 		}
 		return false
 	}
-	if um.GroupId.Hex() != "" && um.GroupId.Hex() != "000000000000000000000000" {
-		if u.GroupId == um.GroupId {
+	if um.GridFSId.Hex() != "" && um.GridFSId.Hex() != "000000000000000000000000" {
+		if u.GridFSId == um.GridFSId {
 			return true
 		}
 		return false
@@ -118,12 +122,12 @@ func (u *taskModel) match(doc interface{}) bool {
 }
 
 // getID returns the unique identifier of the userModel
-func (u *taskModel) getID() (id interface{}) {
+func (u *fileModel) getID() (id interface{}) {
 	return u.Id
 }
 
 // addTimeStamps updates an userModel struct with a timestamp
-func (u *taskModel) addTimeStamps(newRecord bool) {
+func (u *fileModel) addTimeStamps(newRecord bool) {
 	currentTime := time.Now().UTC()
 	u.LastModified = currentTime
 	if newRecord {
@@ -132,16 +136,15 @@ func (u *taskModel) addTimeStamps(newRecord bool) {
 }
 
 // addObjectID checks if a userModel has a value assigned for Id if no value a new one is generated and assigned
-func (u *taskModel) addObjectID() {
+func (u *fileModel) addObjectID() {
 	if u.Id.Hex() == "" || u.Id.Hex() == "000000000000000000000000" {
 		u.Id = primitive.NewObjectID()
 	}
 }
 
 // postProcess updates an userModel struct postProcess to do things such as removing the password field's value
-func (u *taskModel) postProcess() (err error) {
-	//u.Password = ""
-	if u.UserId.Hex() == "" {
+func (u *fileModel) postProcess() (err error) {
+	if u.GridFSId.Hex() == "" {
 		err = errors.New("user record does not have an email")
 	}
 	// TODO - When implementing soft delete, DeletedAt can be checked here to ensure deleted users are filtered out
@@ -149,7 +152,7 @@ func (u *taskModel) postProcess() (err error) {
 }
 
 // toDoc converts the bson userModel into a bson.D
-func (u *taskModel) toDoc() (doc bson.D, err error) {
+func (u *fileModel) toDoc() (doc bson.D, err error) {
 	data, err := bson.Marshal(u)
 	if err != nil {
 		return
@@ -159,19 +162,19 @@ func (u *taskModel) toDoc() (doc bson.D, err error) {
 }
 
 // bsonFilter generates a bson filter for MongoDB queries from the userModel data
-func (u *taskModel) bsonFilter() (doc bson.D, err error) {
+func (u *fileModel) bsonFilter() (doc bson.D, err error) {
 	if u.Id.Hex() != "" && u.Id.Hex() != "000000000000000000000000" {
 		doc = bson.D{{"_id", u.Id}}
-	} else if u.GroupId.Hex() != "" && u.GroupId.Hex() != "000000000000000000000000" {
-		doc = bson.D{{"group_id", u.GroupId}}
-	} else if u.UserId.Hex() != "" && u.UserId.Hex() != "000000000000000000000000" {
-		doc = bson.D{{"user_id", u.UserId}}
+	} else if u.OwnerId.Hex() != "" && u.OwnerId.Hex() != "000000000000000000000000" {
+		doc = bson.D{{"owner_id", u.OwnerId}}
+	} else if u.GridFSId.Hex() != "" && u.GridFSId.Hex() != "000000000000000000000000" {
+		doc = bson.D{{"gridfs_id", u.GridFSId}}
 	}
 	return
 }
 
 // bsonUpdate generates a bson update for MongoDB queries from the userModel data
-func (u *taskModel) bsonUpdate() (doc bson.D, err error) {
+func (u *fileModel) bsonUpdate() (doc bson.D, err error) {
 	inner, err := u.toDoc()
 	if err != nil {
 		return
@@ -180,16 +183,18 @@ func (u *taskModel) bsonUpdate() (doc bson.D, err error) {
 	return
 }
 
-// toRoot creates and return a new pointer to a Task JSON struct from a pointer to a BSON taskModel
-func (u *taskModel) toRoot() *models.Task {
-	return &models.Task{
+// toRoot creates and return a new pointer to a File JSON struct from a pointer to a BSON fileModel
+func (u *fileModel) toRoot() *models.File {
+	return &models.File{
 		Id:           u.Id.Hex(),
+		OwnerId:      u.OwnerId.Hex(),
+		OwnerType:    u.OwnerType,
+		GridFSId:     u.GridFSId.Hex(),
+		BucketName:   u.BucketName,
+		BucketType:   u.BucketType,
 		Name:         u.Name,
-		Completed:    u.Completed,
-		Due:          u.Due,
-		Description:  u.Description,
-		UserId:       u.UserId.Hex(),
-		GroupId:      u.GroupId.Hex(),
+		FileType:     u.FileType,
+		Size:         u.Size,
 		LastModified: u.LastModified,
 		CreatedAt:    u.CreatedAt,
 		DeletedAt:    u.DeletedAt,

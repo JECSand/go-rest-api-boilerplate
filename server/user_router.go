@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"github.com/JECSand/go-rest-api-boilerplate/auth"
 	"github.com/JECSand/go-rest-api-boilerplate/models"
@@ -8,19 +9,22 @@ import (
 	"github.com/JECSand/go-rest-api-boilerplate/utilities"
 	"github.com/gorilla/mux"
 	"io"
+	"mime"
 	"net/http"
 	"os"
+	"time"
 )
 
 type userRouter struct {
 	aService *services.TokenService
 	uService services.UserService
 	gService services.GroupService
+	fService services.FileService
 }
 
 // NewUserRouter is a function that initializes a new userRouter struct
-func NewUserRouter(router *mux.Router, a *services.TokenService, u services.UserService, g services.GroupService) *mux.Router {
-	uRouter := userRouter{a, u, g}
+func NewUserRouter(router *mux.Router, a *services.TokenService, u services.UserService, g services.GroupService, f services.FileService) *mux.Router {
+	uRouter := userRouter{a, u, g, f}
 	router.HandleFunc("/auth", utilities.HandleOptionsRequest).Methods("OPTIONS")
 	router.HandleFunc("/auth", uRouter.SignIn).Methods("POST")
 	router.HandleFunc("/auth", a.MemberTokenVerifyMiddleWare(uRouter.RefreshSession)).Methods("GET")
@@ -38,6 +42,9 @@ func NewUserRouter(router *mux.Router, a *services.TokenService, u services.User
 	router.HandleFunc("/users", a.AdminTokenVerifyMiddleWare(uRouter.CreateUser)).Methods("POST")
 	router.HandleFunc("/users/{userId}", a.AdminTokenVerifyMiddleWare(uRouter.DeleteUser)).Methods("DELETE")
 	router.HandleFunc("/users/{userId}", a.MemberTokenVerifyMiddleWare(uRouter.ModifyUser)).Methods("PATCH")
+	router.HandleFunc("/users/{userId}/image", utilities.HandleOptionsRequest).Methods("OPTIONS")
+	router.HandleFunc("/users/{userId}/image", a.MemberTokenVerifyMiddleWare(uRouter.UploadImage)).Methods("POST")
+	router.HandleFunc("/users/{userId}/image", a.MemberTokenVerifyMiddleWare(uRouter.GetImage)).Methods("GET")
 	return router
 }
 
@@ -396,4 +403,106 @@ func (ur *userRouter) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+}
+
+// UploadImage allows for a user image to be associated with the User record
+func (ur *userRouter) UploadImage(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userId := vars["userId"]
+	if !utilities.CheckObjectID(userId) {
+		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: "missing userId"})
+		return
+	}
+	file, handler, err := r.FormFile("file")
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: err.Error()})
+		return
+	}
+	defer file.Close()
+	filter := models.User{Id: userId}
+	userScope, err := auth.VerifyUserRequestScope(r, userId)
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
+		return
+	}
+	filter.LoadScope(userScope, "find")
+	user, err := ur.uService.UserFind(&filter)
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusNotFound, utilities.JWTError{Message: "user not found"})
+		return
+	}
+	newImage := false
+	if !user.CheckID("image_id") {
+		user.ImageId = utilities.GenerateObjectID()
+		newImage = true
+	}
+	f := &models.File{Id: user.ImageId, OwnerType: "user", OwnerId: user.Id, BucketType: "user-images", Name: handler.Filename}
+	buf := bytes.NewBuffer(nil)
+	if _, err = io.Copy(buf, file); err != nil {
+		utilities.RespondWithError(w, http.StatusInternalServerError, utilities.JWTError{Message: err.Error()})
+		return
+	}
+	if newImage {
+		f, err = ur.fService.FileCreate(f, buf.Bytes())
+		if err != nil {
+			utilities.RespondWithError(w, http.StatusInternalServerError, utilities.JWTError{Message: err.Error()})
+			return
+		}
+		user, err = ur.uService.UserUpdate(&models.User{Id: user.Id, ImageId: user.ImageId})
+		if err != nil {
+			utilities.RespondWithError(w, http.StatusInternalServerError, utilities.JWTError{Message: err.Error()})
+			return
+		}
+	} else {
+		f, err = ur.fService.FileUpdate(f, buf.Bytes())
+		if err != nil {
+			utilities.RespondWithError(w, http.StatusInternalServerError, utilities.JWTError{Message: err.Error()})
+			return
+		}
+	}
+	user.Password = ""
+	w = utilities.SetResponseHeaders(w, "", "")
+	w.WriteHeader(http.StatusOK)
+	if err = json.NewEncoder(w).Encode(user); err != nil {
+		return
+	}
+	return
+}
+
+// GetImage returns the file contents of a User image
+func (ur *userRouter) GetImage(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userId := vars["userId"]
+	if !utilities.CheckObjectID(userId) {
+		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: "missing userId"})
+		return
+	}
+	filter := models.User{Id: userId}
+	userScope, err := auth.VerifyUserRequestScope(r, userId)
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
+		return
+	}
+	filter.LoadScope(userScope, "find")
+	user, err := ur.uService.UserFind(&filter)
+	if err != nil || !user.CheckID("image_id") {
+		utilities.RespondWithError(w, http.StatusNotFound, utilities.JWTError{Message: "user image not found"})
+		return
+	}
+	file, err := ur.fService.FileFind(&models.File{Id: user.ImageId})
+	if err != nil || file.OwnerType != "user" || file.OwnerId != user.Id {
+		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: "unauthorized"})
+		return
+	}
+	contents, err := ur.fService.RetrieveFile(&models.File{GridFSId: file.GridFSId})
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusNotFound, utilities.JWTError{Message: err.Error()})
+		return
+	}
+	modTime := time.Now()
+	cd := mime.FormatMediaType("attachment", map[string]string{"filename": file.Name})
+	w.Header().Set("Content-Disposition", cd)
+	w.Header().Set("Content-Type", "application/octet-stream")
+	contentReader := bytes.NewReader(contents.Bytes())
+	http.ServeContent(w, r, file.Name, modTime, contentReader)
 }

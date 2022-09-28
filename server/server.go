@@ -17,13 +17,14 @@ type Server struct {
 	UserService  services.UserService
 	GroupService services.GroupService
 	TaskService  services.TaskService
+	FileService  services.FileService
 }
 
 // NewServer is a function used to initialize a new Server struct
-func NewServer(u services.UserService, g services.GroupService, tt services.TaskService, t *services.TokenService) *Server {
+func NewServer(u services.UserService, g services.GroupService, tt services.TaskService, f services.FileService, t *services.TokenService) *Server {
 	router := mux.NewRouter().StrictSlash(true)
 	router = NewGroupRouter(router, t, g)
-	router = NewUserRouter(router, t, u, g)
+	router = NewUserRouter(router, t, u, g, f)
 	router = NewTaskRouter(router, t, tt)
 	return &Server{
 		Router:       router,
@@ -31,6 +32,7 @@ func NewServer(u services.UserService, g services.GroupService, tt services.Task
 		UserService:  u,
 		GroupService: g,
 		TaskService:  tt,
+		FileService:  f,
 	}
 }
 

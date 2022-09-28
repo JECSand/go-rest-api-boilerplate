@@ -2,7 +2,7 @@ package services
 
 import "github.com/JECSand/go-rest-api-boilerplate/models"
 
-// TaskService is an interface used to manage the relevant group doc controllers
+// TaskService is an interface used to manage the relevant task doc controllers
 type TaskService interface {
 	TaskCreate(g *models.Task) (*models.Task, error)
 	TaskFind(g *models.Task) (*models.Task, error)
