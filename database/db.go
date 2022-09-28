@@ -4,6 +4,7 @@ import (
 	"context"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/gridfs"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"os"
 	"sync"
@@ -28,12 +29,14 @@ type dbModel interface {
 type DBClient interface {
 	Connect() error
 	Close() error
+	GetBucket(bucketName string) (*gridfs.Bucket, error)
 	GetCollection(collectionName string) DBCollection
 	NewDBHandler(collectionName string) *DBHandler[dbModel]
 	NewUserHandler() *DBHandler[*userModel]
 	NewGroupHandler() *DBHandler[*groupModel]
 	NewBlacklistHandler() *DBHandler[*blacklistModel]
 	NewTaskHandler() *DBHandler[*taskModel]
+	NewFileHandler() *DBHandler[*fileModel]
 }
 
 // DBCursor is an abstraction of the dbClient and testDBClient types
@@ -100,6 +103,17 @@ func (db *dbClient) Close() error {
 	return db.client.Disconnect(ctx)
 }
 
+// GetBucket returns a mongo collection based on the input collection name
+func (db *dbClient) GetBucket(bucketName string) (*gridfs.Bucket, error) {
+	bucketOpts := options.GridFSBucket()
+	bucketOpts.SetName(bucketName)
+	bucket, err := gridfs.NewBucket(db.client.Database(os.Getenv("DATABASE")), bucketOpts)
+	if err != nil {
+		return nil, err
+	}
+	return bucket, nil
+}
+
 // GetCollection returns a mongo collection based on the input collection name
 func (db *dbClient) GetCollection(collectionName string) DBCollection {
 	return db.client.Database(os.Getenv("DATABASE")).Collection(collectionName)
@@ -145,6 +159,15 @@ func (db *dbClient) NewBlacklistHandler() *DBHandler[*blacklistModel] {
 func (db *dbClient) NewTaskHandler() *DBHandler[*taskModel] {
 	col := db.GetCollection("tasks")
 	return &DBHandler[*taskModel]{
+		db:         db,
+		collection: col,
+	}
+}
+
+// NewFileHandler returns a new DBHandler files interface
+func (db *dbClient) NewFileHandler() *DBHandler[*fileModel] {
+	col := db.GetCollection("files")
+	return &DBHandler[*fileModel]{
 		db:         db,
 		collection: col,
 	}
