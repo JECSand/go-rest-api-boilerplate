@@ -971,7 +971,7 @@ ___
 * Body
 ```
 {
-  "Name": "newGroup"
+  "name": "newGroup"
 }
 ```
 
