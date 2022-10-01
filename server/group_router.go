@@ -14,11 +14,12 @@ import (
 type groupRouter struct {
 	aService *services.TokenService
 	gService services.GroupService
+	uService services.UserService
 }
 
 // NewGroupRouter is a function that initializes a new groupRouter struct
-func NewGroupRouter(router *mux.Router, a *services.TokenService, g services.GroupService) *mux.Router {
-	gRouter := groupRouter{a, g}
+func NewGroupRouter(router *mux.Router, a *services.TokenService, g services.GroupService, u services.UserService) *mux.Router {
+	gRouter := groupRouter{a, g, u}
 	router.HandleFunc("/groups", utilities.HandleOptionsRequest).Methods("OPTIONS")
 	router.HandleFunc("/groups", a.AdminTokenVerifyMiddleWare(gRouter.GroupsShow)).Methods("GET")
 	router.HandleFunc("/groups", a.RootAdminTokenVerifyMiddleWare(gRouter.CreateGroup)).Methods("POST")
@@ -26,7 +27,73 @@ func NewGroupRouter(router *mux.Router, a *services.TokenService, g services.Gro
 	router.HandleFunc("/groups/{groupId}", a.AdminTokenVerifyMiddleWare(gRouter.GroupShow)).Methods("GET")
 	router.HandleFunc("/groups/{groupId}", a.RootAdminTokenVerifyMiddleWare(gRouter.DeleteGroup)).Methods("DELETE")
 	router.HandleFunc("/groups/{groupId}", a.AdminTokenVerifyMiddleWare(gRouter.ModifyGroup)).Methods("PATCH")
+	router.HandleFunc("/groups/{groupId}/users", utilities.HandleOptionsRequest).Methods("OPTIONS")
+	router.HandleFunc("/groups/{groupId}/users", a.AdminTokenVerifyMiddleWare(gRouter.GroupUsersShow)).Methods("GET")
 	return router
+}
+
+// getGroupUsers asynchronously gets a group and its users from the database
+func (gr *groupRouter) getGroupUsers(groupId string) (*groupUsersDTO, error) {
+	var dto groupUsersDTO
+	gOutCh := make(chan *models.Group)
+	gErrCh := make(chan error)
+	uOutCh := make(chan []*models.User)
+	uErrCh := make(chan error)
+	go func() {
+		reG, err := gr.gService.GroupFind(&models.Group{Id: groupId})
+		gOutCh <- reG
+		gErrCh <- err
+	}()
+	go func() {
+		reU, err := gr.uService.UsersFind(&models.User{GroupId: groupId})
+		uOutCh <- reU
+		uErrCh <- err
+	}()
+	for i := 0; i < 4; i++ {
+		select {
+		case gOut := <-gOutCh:
+			dto.Group = gOut
+		case gErr := <-gErrCh:
+			if gErr != nil {
+				return &dto, gErr
+			}
+		case uOut := <-uOutCh:
+			dto.Users = uOut
+		case uErr := <-uErrCh:
+			if uErr != nil {
+				return &dto, uErr
+			}
+		}
+	}
+	return &dto, nil
+}
+
+// GroupUsersShow returns a groupUsersDTO
+func (gr *groupRouter) GroupUsersShow(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	var err error
+	groupId := vars["groupId"]
+	if !utilities.CheckObjectID(groupId) {
+		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: "missing groupId"})
+		return
+	}
+	groupId, err = auth.VerifyGroupRequestScope(r, groupId)
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
+		return
+	}
+	dto, err := gr.getGroupUsers(groupId)
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusNotFound, utilities.JWTError{Message: err.Error()})
+		return
+	}
+	dto.clean()
+	w = utilities.SetResponseHeaders(w, "", "")
+	w.WriteHeader(http.StatusOK)
+	if err = json.NewEncoder(w).Encode(dto); err != nil {
+		return
+	}
+	return
 }
 
 // GroupsShow returns all groups to client
