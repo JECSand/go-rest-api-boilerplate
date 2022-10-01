@@ -1083,3 +1083,60 @@ ___
   Access-Control-Allow-Methods: GET,DELETE,POST,PATCH  
 }
 ```
+
+#### 6. Get Group Users
+* GET - /groups/{groupId}/users
+
+##### Request
+
+***
+* Headers
+
+```
+{
+  Content-Type: application/json,
+  Auth-Token: ""
+}
+```
+
+##### Response
+
+***
+* Headers
+
+```
+{
+  Content-Type: application/json; charset=UTF-8,
+  Date: DoW, DD MMM YYYY HH:mm:SS GMT,
+  Content-Length: 0,
+  Access-Control-Allow-Headers: Content-Type, Auth-Token, API-Key,
+  Access-Control-Expose-Headers: Content-Type, Auth-Token, API-Key,
+  Access-Control-Allow-Origin: *,
+  Access-Control-Allow-Methods: GET,DELETE,POST,PATCH  
+}
+```
+
+* Body
+```
+{
+  "group": {
+    "id": "000000000000000000000002",
+    "name": "newGroup",    
+    "last_modified": 2019-06-07 20:18:15.145971952 +0000 UTC,
+    "creation_datetime": 2019-06-07 20:18:15.145971952 +0000 UTC
+  },
+  "users": [
+    {
+      "id": "000000000000000000000011",
+      "username": "userName",
+      "firstname": "jane",
+      "lastname": "smith",
+      "email": "user@example.com",
+      "role": "member",
+      "group_id": "000000000000000000000002",
+      "last_modified": 2019-06-07 20:17:14.630917778 +0000 UTC,
+      "created_at": 2019-06-07 20:17:14.630917778 +0000 UTC
+    }
+  ]
+}
+```

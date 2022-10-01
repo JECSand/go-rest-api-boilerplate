@@ -56,6 +56,19 @@ type groupsDTO struct {
 	Groups []*models.Group `json:"groups"`
 }
 
+// groupUsersDTO is used when returning a group with its associated users
+type groupUsersDTO struct {
+	Group *models.Group  `json:"group"`
+	Users []*models.User `json:"users"`
+}
+
+// clean ensures the users in the groupUsersDTO have no passwords set
+func (u *groupUsersDTO) clean() {
+	for i, _ := range u.Users {
+		u.Users[i].Password = ""
+	}
+}
+
 /*
 ================ Task DTOs ==================
 */
