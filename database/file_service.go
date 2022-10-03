@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/JECSand/go-rest-api-boilerplate/models"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"sync"
 )
 
 // FileService is used by the app to manage all File related controllers and functionality
@@ -218,6 +219,26 @@ func (p *FileService) FileDelete(g *models.File) (*models.File, error) {
 		return nil, err
 	}
 	return gm.toRoot(), nil
+}
+
+// FileDeleteMany is used to delete a GridFS File
+func (p *FileService) FileDeleteMany(g []*models.File) error {
+	outErrors := make([]error, len(g))
+	var wg sync.WaitGroup
+	wg.Add(len(g))
+	for c, f := range g {
+		go func(c int, f *models.File) {
+			_, outErrors[c] = p.FileDelete(f)
+			wg.Done()
+		}(c, f)
+	}
+	wg.Wait()
+	for _, err := range outErrors {
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // RetrieveFile returns the content bytes for a GridFS File

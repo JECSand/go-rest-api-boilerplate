@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"github.com/JECSand/go-rest-api-boilerplate/auth"
 	"github.com/JECSand/go-rest-api-boilerplate/models"
 	"github.com/JECSand/go-rest-api-boilerplate/services"
@@ -19,12 +20,13 @@ type userRouter struct {
 	aService *services.TokenService
 	uService services.UserService
 	gService services.GroupService
+	tService services.TaskService
 	fService services.FileService
 }
 
 // NewUserRouter is a function that initializes a new userRouter struct
-func NewUserRouter(router *mux.Router, a *services.TokenService, u services.UserService, g services.GroupService, f services.FileService) *mux.Router {
-	uRouter := userRouter{a, u, g, f}
+func NewUserRouter(router *mux.Router, a *services.TokenService, u services.UserService, g services.GroupService, t services.TaskService, f services.FileService) *mux.Router {
+	uRouter := userRouter{a, u, g, t, f}
 	router.HandleFunc("/auth", utilities.HandleOptionsRequest).Methods("OPTIONS")
 	router.HandleFunc("/auth", uRouter.SignIn).Methods("POST")
 	router.HandleFunc("/auth", a.MemberTokenVerifyMiddleWare(uRouter.RefreshSession)).Methods("GET")
@@ -390,7 +392,17 @@ func (ur *userRouter) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	filter.LoadScope(userScope, "find")
-	user, err := ur.uService.UserDelete(&filter)
+	user, err := ur.uService.UserFind(&filter)
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusNotFound, utilities.JWTError{Message: err.Error()})
+		return
+	}
+	err = ur.deleteUserAssets(user)
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusInternalServerError, utilities.JWTError{Message: err.Error()})
+		return
+	}
+	user, err = ur.uService.UserDelete(&filter)
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusNotFound, utilities.JWTError{Message: err.Error()})
 		return
@@ -505,4 +517,38 @@ func (ur *userRouter) GetImage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/octet-stream")
 	contentReader := bytes.NewReader(contents.Bytes())
 	http.ServeContent(w, r, file.Name, modTime, contentReader)
+}
+
+// deleteUserAssets asynchronously gets a group and its users from the database
+func (ur *userRouter) deleteUserAssets(user *models.User) error {
+	if !user.CheckID("id") {
+		return errors.New("filter id cannot be empty for mass delete")
+	}
+	gErrCh := make(chan error)
+	uErrCh := make(chan error)
+	go func() {
+		if user.CheckID("image_id") {
+			_, err := ur.fService.FileDelete(&models.File{OwnerId: user.Id, OwnerType: "user"})
+			gErrCh <- err
+		} else {
+			gErrCh <- nil
+		}
+	}()
+	go func() {
+		_, err := ur.tService.TaskDeleteMany(&models.Task{UserId: user.Id})
+		uErrCh <- err
+	}()
+	for i := 0; i < 2; i++ {
+		select {
+		case gErr := <-gErrCh:
+			if gErr != nil {
+				return gErr
+			}
+		case uErr := <-uErrCh:
+			if uErr != nil {
+				return uErr
+			}
+		}
+	}
+	return nil
 }

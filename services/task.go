@@ -8,6 +8,7 @@ type TaskService interface {
 	TaskFind(g *models.Task) (*models.Task, error)
 	TasksFind(g *models.Task) ([]*models.Task, error)
 	TaskDelete(g *models.Task) (*models.Task, error)
+	TaskDeleteMany(g *models.Task) (*models.Task, error)
 	TaskUpdate(g *models.Task) (*models.Task, error)
 	TaskDocInsert(g *models.Task) (*models.Task, error)
 }

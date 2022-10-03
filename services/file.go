@@ -11,6 +11,7 @@ type FileService interface {
 	FileFind(g *models.File) (*models.File, error)
 	FilesFind(g *models.File) ([]*models.File, error)
 	FileDelete(g *models.File) (*models.File, error)
+	FileDeleteMany(g []*models.File) error
 	FileUpdate(g *models.File, content []byte) (*models.File, error)
 	RetrieveFile(g *models.File) (*bytes.Buffer, error)
 }

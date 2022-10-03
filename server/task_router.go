@@ -73,6 +73,19 @@ func (gr *taskRouter) CreateTask(w http.ResponseWriter, r *http.Request) {
 	}
 	task.LoadScope(userScope)
 	task.Id = utilities.GenerateObjectID()
+	if !task.CheckID("user_id") || !task.CheckID("group_id") {
+		td, err := auth.LoadTokenFromRequest(r)
+		if err != nil {
+			utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
+			return
+		}
+		if !task.CheckID("user_id") {
+			task.UserId = td.UserId
+		}
+		if !task.CheckID("group_id") {
+			task.GroupId = td.GroupId
+		}
+	}
 	g, err := gr.tService.TaskCreate(&task)
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusServiceUnavailable, utilities.JWTError{Message: err.Error()})

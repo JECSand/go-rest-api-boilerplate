@@ -126,6 +126,19 @@ func (p *UserService) UserDelete(u *models.User) (*models.User, error) {
 	return um.toRoot(), err
 }
 
+// UserDeleteMany is used to delete many Users
+func (p *UserService) UserDeleteMany(u *models.User) (*models.User, error) {
+	um, err := newUserModel(u)
+	if err != nil {
+		return nil, err
+	}
+	um, err = p.userHandler.DeleteMany(um)
+	if err != nil {
+		return nil, err
+	}
+	return um.toRoot(), err
+}
+
 // UsersFind is used to find all user docs
 func (p *UserService) UsersFind(u *models.User) ([]*models.User, error) {
 	var users []*models.User

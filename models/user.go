@@ -173,3 +173,14 @@ func (g *User) BuildUpdate(curUser *User) {
 		g.Role = curUser.Role
 	}
 }
+
+// UsersToFiles converts an input slice of user to a slice of file
+func UsersToFiles(users []*User) []*File {
+	var files []*File
+	for _, u := range users {
+		if u.CheckID("image_id") {
+			files = append(files, &File{OwnerId: u.Id, OwnerType: "user"})
+		}
+	}
+	return files
+}

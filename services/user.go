@@ -10,6 +10,7 @@ type UserService interface {
 	UpdatePassword(u *models.User, CurrentPassword string, newPassword string) (*models.User, error)
 	UserCreate(u *models.User) (*models.User, error)
 	UserDelete(u *models.User) (*models.User, error)
+	UserDeleteMany(u *models.User) (*models.User, error)
 	UsersFind(u *models.User) ([]*models.User, error)
 	UserFind(u *models.User) (*models.User, error)
 	UserUpdate(u *models.User) (*models.User, error)
