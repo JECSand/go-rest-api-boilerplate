@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/JECSand/go-rest-api-boilerplate/auth"
 	"github.com/JECSand/go-rest-api-boilerplate/models"
 	"github.com/JECSand/go-rest-api-boilerplate/services"
@@ -15,11 +16,13 @@ type groupRouter struct {
 	aService *services.TokenService
 	gService services.GroupService
 	uService services.UserService
+	tService services.TaskService
+	fService services.FileService
 }
 
 // NewGroupRouter is a function that initializes a new groupRouter struct
-func NewGroupRouter(router *mux.Router, a *services.TokenService, g services.GroupService, u services.UserService) *mux.Router {
-	gRouter := groupRouter{a, g, u}
+func NewGroupRouter(router *mux.Router, a *services.TokenService, g services.GroupService, u services.UserService, t services.TaskService, f services.FileService) *mux.Router {
+	gRouter := groupRouter{a, g, u, t, f}
 	router.HandleFunc("/groups", utilities.HandleOptionsRequest).Methods("OPTIONS")
 	router.HandleFunc("/groups", a.AdminTokenVerifyMiddleWare(gRouter.GroupsShow)).Methods("GET")
 	router.HandleFunc("/groups", a.RootAdminTokenVerifyMiddleWare(gRouter.CreateGroup)).Methods("POST")
@@ -222,6 +225,16 @@ func (gr *groupRouter) DeleteGroup(w http.ResponseWriter, r *http.Request) {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: "missing groupId"})
 		return
 	}
+	groupUsers, err := gr.getGroupUsers(groupId)
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusNotFound, utilities.JWTError{Message: err.Error()})
+		return
+	}
+	err = gr.deleteGroupAssets(groupUsers.Group, groupUsers.Users)
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusInternalServerError, utilities.JWTError{Message: err.Error()})
+		return
+	}
 	group, err := gr.gService.GroupDelete(&models.Group{Id: groupId})
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusNotFound, utilities.JWTError{Message: err.Error()})
@@ -233,4 +246,43 @@ func (gr *groupRouter) DeleteGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	return
+}
+
+// deleteGroupAssets asynchronously gets a group and its users from the database
+func (gr *groupRouter) deleteGroupAssets(group *models.Group, users []*models.User) error {
+	if !group.CheckID("id") {
+		return errors.New("filter id cannot be empty for mass delete")
+	}
+	fErrCh := make(chan error) // Images Files Bulk Delete
+	uErrCh := make(chan error) // Delete Group Users
+	tErrCh := make(chan error) // Delete Group Tasks
+	go func() {
+		err := gr.fService.FileDeleteMany(models.UsersToFiles(users))
+		fErrCh <- err
+	}()
+	go func() {
+		_, err := gr.uService.UserDeleteMany(&models.User{GroupId: group.Id})
+		uErrCh <- err
+	}()
+	go func() {
+		_, err := gr.tService.TaskDeleteMany(&models.Task{GroupId: group.Id})
+		tErrCh <- err
+	}()
+	for i := 0; i < 3; i++ {
+		select {
+		case fErr := <-fErrCh:
+			if fErr != nil {
+				return fErr
+			}
+		case uErr := <-uErrCh:
+			if uErr != nil {
+				return uErr
+			}
+		case tErr := <-tErrCh:
+			if tErr != nil {
+				return tErr
+			}
+		}
+	}
+	return nil
 }

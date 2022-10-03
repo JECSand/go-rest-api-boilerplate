@@ -728,9 +728,7 @@ ___
   "lastname": "smith",
   "email": "user@example.com",
   "password": "xyz789",
-  "role": "member",
-  "last_modified": 2019-06-07 20:17:14.630917778 +0000 UTC,
-  "created_at": 2019-06-07 20:17:14.630917778 +0000 UTC
+  "role": "member"
 }
 ```
 

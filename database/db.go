@@ -65,6 +65,7 @@ type DBCollection interface {
 	Find(ctx context.Context, filter interface{}, opts ...*options.FindOptions) (cur *mongo.Cursor, err error)
 	FindOne(ctx context.Context, filter interface{}, opts ...*options.FindOneOptions) *mongo.SingleResult
 	CountDocuments(ctx context.Context, filter interface{}, opts ...*options.CountOptions) (int64, error)
+	DeleteMany(ctx context.Context, filter interface{}, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error)
 }
 
 // DBClient manages a database connection
@@ -281,6 +282,19 @@ func (h *DBHandler[T]) DeleteOne(filter T) (T, error) { //TODO: to be replaced w
 	defer cancel()
 	err = h.collection.FindOneAndDelete(ctx, f).Decode(&m)
 	return m, err
+}
+
+// DeleteMany adds a new dbModel record to a collection
+func (h *DBHandler[T]) DeleteMany(filter T) (T, error) { //TODO: to be replaced with "soft delete"
+	var m T
+	f, err := filter.bsonFilter()
+	if err != nil {
+		return m, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_, err = h.collection.DeleteMany(ctx, f)
+	return filter, err
 }
 
 // newRoutine returns a new Routine for executing ASYNC DB statements

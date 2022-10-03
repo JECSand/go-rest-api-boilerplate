@@ -29,6 +29,12 @@ func (g *Task) LoadScope(scopeUser *User) {
 			g.UserId = scopeUser.Id
 		}
 	}
+	if !g.CheckID("user_id") {
+		g.UserId = scopeUser.Id
+	}
+	if !g.CheckID("group_id") {
+		g.GroupId = scopeUser.GroupId
+	}
 	return
 }
 

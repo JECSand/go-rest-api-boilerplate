@@ -754,6 +754,20 @@ func (coll *testMongoCollection) InsertMany(ctx context.Context, documents []int
 	return imResult, err
 }
 
+// DeleteMany from test collection
+func (coll *testMongoCollection) DeleteMany(ctx context.Context, filter interface{}, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
+	var delCount int64
+	coll.ctx = ctx
+	fmt.Println("\n--->DELETE MANY: ", filter, opts)
+	filterDoc, err := coll.unmarshallBSON(filter)
+	if err != nil {
+		return nil, err
+	}
+	delDocs, err := coll.delete([]dbModel{filterDoc})
+	delCount = int64(len(delDocs))
+	return &mongo.DeleteResult{DeletedCount: delCount}, nil
+}
+
 // DeleteOne from test collection
 func (coll *testMongoCollection) DeleteOne(ctx context.Context, filter interface{}, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
 	var delCount int64

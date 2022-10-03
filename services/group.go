@@ -8,6 +8,7 @@ type GroupService interface {
 	GroupFind(g *models.Group) (*models.Group, error)
 	GroupsFind(g *models.Group) ([]*models.Group, error)
 	GroupDelete(g *models.Group) (*models.Group, error)
+	GroupDeleteMany(g *models.Group) (*models.Group, error)
 	GroupUpdate(g *models.Group) (*models.Group, error)
 	GroupDocInsert(g *models.Group) (*models.Group, error)
 }

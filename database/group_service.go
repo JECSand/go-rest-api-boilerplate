@@ -84,6 +84,19 @@ func (p *GroupService) GroupDelete(g *models.Group) (*models.Group, error) {
 	return gm.toRoot(), err
 }
 
+// GroupDeleteMany is used to delete many Groups
+func (p *GroupService) GroupDeleteMany(g *models.Group) (*models.Group, error) {
+	gm, err := newGroupModel(g)
+	if err != nil {
+		return nil, err
+	}
+	gm, err = p.handler.DeleteMany(gm)
+	if err != nil {
+		return nil, err
+	}
+	return gm.toRoot(), err
+}
+
 // GroupUpdate is used to update an existing group
 func (p *GroupService) GroupUpdate(g *models.Group) (*models.Group, error) {
 	var filter models.Group

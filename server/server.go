@@ -23,8 +23,8 @@ type Server struct {
 // NewServer is a function used to initialize a new Server struct
 func NewServer(u services.UserService, g services.GroupService, tt services.TaskService, f services.FileService, t *services.TokenService) *Server {
 	router := mux.NewRouter().StrictSlash(true)
-	router = NewGroupRouter(router, t, g, u)
-	router = NewUserRouter(router, t, u, g, f)
+	router = NewGroupRouter(router, t, g, u, tt, f)
+	router = NewUserRouter(router, t, u, g, tt, f)
 	router = NewTaskRouter(router, t, tt)
 	return &Server{
 		Router:       router,

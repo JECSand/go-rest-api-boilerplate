@@ -124,6 +124,19 @@ func (p *TaskService) TaskDelete(g *models.Task) (*models.Task, error) {
 	return gm.toRoot(), err
 }
 
+// TaskDeleteMany is used to delete many Tasks
+func (p *TaskService) TaskDeleteMany(g *models.Task) (*models.Task, error) {
+	gm, err := newTaskModel(g)
+	if err != nil {
+		return nil, err
+	}
+	gm, err = p.taskHandler.DeleteMany(gm)
+	if err != nil {
+		return nil, err
+	}
+	return gm.toRoot(), err
+}
+
 // TaskUpdate is used to update an existing Task
 func (p *TaskService) TaskUpdate(g *models.Task) (*models.Task, error) {
 	var filter models.Task
