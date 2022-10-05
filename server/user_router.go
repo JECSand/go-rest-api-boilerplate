@@ -410,7 +410,8 @@ func (ur *userRouter) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	if user.Id != "" {
 		w = utilities.SetResponseHeaders(w, "", "")
 		w.WriteHeader(http.StatusOK)
-		if err = json.NewEncoder(w).Encode("User Deleted"); err != nil {
+		user.Password = ""
+		if err = json.NewEncoder(w).Encode(user); err != nil {
 			return
 		}
 		return
