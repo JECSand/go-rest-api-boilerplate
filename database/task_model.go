@@ -12,7 +12,7 @@ import (
 type taskModel struct {
 	Id           primitive.ObjectID `bson:"_id,omitempty"`
 	Name         string             `bson:"name,omitempty"`
-	Completed    bool               `bson:"completed,omitempty"`
+	Status       models.TaskStatus  `bson:"status,omitempty"`
 	Due          time.Time          `bson:"due,omitempty"`
 	Description  string             `bson:"description,omitempty"`
 	UserId       primitive.ObjectID `bson:"user_id,omitempty"`
@@ -26,7 +26,7 @@ type taskModel struct {
 func newTaskModel(u *models.Task) (um *taskModel, err error) {
 	um = &taskModel{
 		Name:         u.Name,
-		Completed:    u.Completed,
+		Status:       u.Status,
 		Due:          u.Due,
 		Description:  u.Description,
 		LastModified: u.LastModified,
@@ -56,8 +56,8 @@ func (u *taskModel) update(doc interface{}) (err error) {
 	if len(um.Name) > 0 {
 		u.Name = um.Name
 	}
-	if um.Completed {
-		u.Completed = um.Completed
+	if len(um.Status) > 0 {
+		u.Status = um.Status
 	}
 	if !um.Due.IsZero() {
 		u.Due = um.Due
@@ -185,7 +185,7 @@ func (u *taskModel) toRoot() *models.Task {
 	return &models.Task{
 		Id:           u.Id.Hex(),
 		Name:         u.Name,
-		Completed:    u.Completed,
+		Status:       u.Status,
 		Due:          u.Due,
 		Description:  u.Description,
 		UserId:       u.UserId.Hex(),

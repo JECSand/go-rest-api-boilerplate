@@ -47,6 +47,17 @@ func (u *usersDTO) clean() {
 	}
 }
 
+// userTasksDTO is used when returning user with associated tasks
+type userTasksDTO struct {
+	User  *models.User   `json:"user"`
+	Tasks []*models.Task `json:"tasks"`
+}
+
+// clean ensures the users in the userTasksDTO have password set
+func (u *userTasksDTO) clean() {
+	u.User.Password = ""
+}
+
 /*
 ================ Group DTOs ==================
 */
@@ -67,6 +78,12 @@ func (u *groupUsersDTO) clean() {
 	for i, _ := range u.Users {
 		u.Users[i].Password = ""
 	}
+}
+
+// groupTasksDTO is used when returning a group with its associated tasks
+type groupTasksDTO struct {
+	Group *models.Group  `json:"group"`
+	Tasks []*models.Task `json:"tasks"`
 }
 
 /*

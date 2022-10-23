@@ -51,12 +51,15 @@ func (t *TokenData) GetGroupsScope() *models.Group {
 }
 
 // GetUsersScope returns a scoped User ID filter based on token User role
-func (t *TokenData) GetUsersScope() *models.User {
+func (t *TokenData) GetUsersScope(scopeType string) *models.User {
 	g := models.User{Id: t.UserId, GroupId: t.GroupId, RootAdmin: t.RootAdmin, Role: t.Role}
 	if t.RootAdmin {
 		g.Id = ""
 		g.GroupId = ""
-	} else if t.Role == "admin" {
+	} else if t.Role == "admin" && scopeType == "create" || scopeType == "update" {
+		g.Id = ""
+		g.GroupId = t.GroupId
+	} else if scopeType == "find" {
 		g.Id = ""
 		g.GroupId = t.GroupId
 	}
@@ -143,27 +146,30 @@ func VerifyGroupRequestScope(r *http.Request, groupId string) (string, error) {
 }
 
 // VerifyUserRequestScope inputs User http request and returns decrypted TokenData or an error
-func VerifyUserRequestScope(r *http.Request, userId string) (*models.User, error) {
+func VerifyUserRequestScope(r *http.Request, userId string, scopeType string) (*models.User, error) {
 	tokenData, err := LoadTokenFromRequest(r)
 	if err != nil {
 		return nil, err
 	}
-	userScope := tokenData.GetUsersScope()
+	userScope := tokenData.GetUsersScope(scopeType)
 	if tokenData.RootAdmin || tokenData.Role == "admin" { // default scope ok if user is a root admin or group admin
 		userScope.Id = userId
 		return userScope, nil
 	}
-	if userScope.Id == userId { // default also ok if user is updating itself
+	if scopeType == "update" && userScope.Id == userId { // default also ok if user is updating itself
+		return userScope, nil
+	}
+	if scopeType == "find" && userScope.GroupId == tokenData.GroupId { // default also ok if user is finding in group
 		return userScope, nil
 	}
 	return nil, errors.New("unauthorized")
 }
 
 // VerifyRequestScope inputs generic http requests and returns decrypted TokenData or an error
-func VerifyRequestScope(r *http.Request) (*models.User, error) {
+func VerifyRequestScope(r *http.Request, scopeType string) (*models.User, error) {
 	tokenData, err := LoadTokenFromRequest(r)
 	if err != nil {
 		return nil, err
 	}
-	return tokenData.GetUsersScope(), nil
+	return tokenData.GetUsersScope(scopeType), nil
 }

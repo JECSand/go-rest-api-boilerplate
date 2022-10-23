@@ -38,16 +38,57 @@ func NewUserRouter(router *mux.Router, a *services.TokenService, u services.User
 	router.HandleFunc("/auth/password", utilities.HandleOptionsRequest).Methods("OPTIONS")
 	router.HandleFunc("/auth/password", a.MemberTokenVerifyMiddleWare(uRouter.UpdatePassword)).Methods("POST")
 	router.HandleFunc("/users", utilities.HandleOptionsRequest).Methods("OPTIONS")
-	router.HandleFunc("/users", a.MemberTokenVerifyMiddleWare(uRouter.UsersShow)).Methods("GET")
+	router.HandleFunc("/users", a.MemberTokenVerifyMiddleWare(uRouter.GetUsers)).Methods("GET")
 	router.HandleFunc("/users/{userId}", utilities.HandleOptionsRequest).Methods("OPTIONS")
-	router.HandleFunc("/users/{userId}", a.MemberTokenVerifyMiddleWare(uRouter.UserShow)).Methods("GET")
+	router.HandleFunc("/users/{userId}", a.MemberTokenVerifyMiddleWare(uRouter.GetUser)).Methods("GET")
 	router.HandleFunc("/users", a.AdminTokenVerifyMiddleWare(uRouter.CreateUser)).Methods("POST")
 	router.HandleFunc("/users/{userId}", a.AdminTokenVerifyMiddleWare(uRouter.DeleteUser)).Methods("DELETE")
 	router.HandleFunc("/users/{userId}", a.MemberTokenVerifyMiddleWare(uRouter.ModifyUser)).Methods("PATCH")
 	router.HandleFunc("/users/{userId}/image", utilities.HandleOptionsRequest).Methods("OPTIONS")
 	router.HandleFunc("/users/{userId}/image", a.MemberTokenVerifyMiddleWare(uRouter.UploadImage)).Methods("POST")
 	router.HandleFunc("/users/{userId}/image", a.MemberTokenVerifyMiddleWare(uRouter.GetImage)).Methods("GET")
+	router.HandleFunc("/users/{userId}/tasks", a.MemberTokenVerifyMiddleWare(uRouter.GetUserTasks)).Methods("GET")
 	return router
+}
+
+// GetUserTasks returns a userTasksDTO
+func (ur *userRouter) GetUserTasks(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	var err error
+	userId := vars["userId"]
+	if !utilities.CheckObjectID(userId) {
+		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: "missing userId"})
+		return
+	}
+	user, err := ur.uService.UserFind(&models.User{Id: userId})
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusNotFound, utilities.JWTError{Message: err.Error()})
+		return
+	}
+	userScope, err := auth.VerifyRequestScope(r, "find")
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
+		return
+	}
+	if userScope.GroupId != "" && userScope.GroupId != user.GroupId {
+		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: "unauthorized"})
+		return
+	}
+	var dto userTasksDTO
+	dto.User = user
+	tasks, err := ur.tService.TasksFind(&models.Task{UserId: userId})
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusNotFound, utilities.JWTError{Message: err.Error()})
+		return
+	}
+	dto.Tasks = tasks
+	dto.clean()
+	w = utilities.SetResponseHeaders(w, "", "")
+	w.WriteHeader(http.StatusOK)
+	if err = json.NewEncoder(w).Encode(dto); err != nil {
+		return
+	}
+	return
 }
 
 // UpdatePassword is the handler function that manages the user password update process
@@ -111,7 +152,7 @@ func (ur *userRouter) ModifyUser(w http.ResponseWriter, r *http.Request) {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: err.Error()})
 		return
 	}
-	userScope, err := auth.VerifyUserRequestScope(r, userId)
+	userScope, err := auth.VerifyUserRequestScope(r, userId, "update")
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
 		return
@@ -306,8 +347,11 @@ func (ur *userRouter) CreateUser(w http.ResponseWriter, r *http.Request) {
 		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
 		return
 	}
-	userScope := decodedToken.GetUsersScope()
+	userScope := decodedToken.GetUsersScope("create")
 	user.LoadScope(userScope, "create")
+	if user.GroupId == "" {
+		user.GroupId = decodedToken.GroupId
+	}
 	u, err := ur.uService.UserCreate(&user)
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: err.Error()})
@@ -323,15 +367,15 @@ func (ur *userRouter) CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// UsersShow is the handler that shows a specific user
-func (ur *userRouter) UsersShow(w http.ResponseWriter, r *http.Request) {
+// GetUsers is the handler that returns a slice of user
+func (ur *userRouter) GetUsers(w http.ResponseWriter, r *http.Request) {
 	decodedToken, err := auth.DecodeJWT(r.Header.Get("Auth-Token"))
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
 		return
 	}
 	var filter models.User
-	userScope := decodedToken.GetUsersScope()
+	userScope := decodedToken.GetUsersScope("find")
 	filter.LoadScope(userScope, "find")
 	users, err := ur.uService.UsersFind(&filter)
 	if err != nil {
@@ -348,8 +392,8 @@ func (ur *userRouter) UsersShow(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-// UserShow is the handler that shows all users
-func (ur *userRouter) UserShow(w http.ResponseWriter, r *http.Request) {
+// GetUser is the handler that returns a specific user
+func (ur *userRouter) GetUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userId := vars["userId"]
 	if !utilities.CheckObjectID(userId) {
@@ -357,7 +401,7 @@ func (ur *userRouter) UserShow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	filter := models.User{Id: userId}
-	userScope, err := auth.VerifyUserRequestScope(r, userId)
+	userScope, err := auth.VerifyUserRequestScope(r, userId, "find")
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
 		return
@@ -386,7 +430,7 @@ func (ur *userRouter) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	filter := models.User{Id: userId}
-	userScope, err := auth.VerifyUserRequestScope(r, userId)
+	userScope, err := auth.VerifyUserRequestScope(r, userId, "update")
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
 		return
@@ -433,7 +477,7 @@ func (ur *userRouter) UploadImage(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 	filter := models.User{Id: userId}
-	userScope, err := auth.VerifyUserRequestScope(r, userId)
+	userScope, err := auth.VerifyUserRequestScope(r, userId, "update")
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
 		return
@@ -491,7 +535,7 @@ func (ur *userRouter) GetImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	filter := models.User{Id: userId}
-	userScope, err := auth.VerifyUserRequestScope(r, userId)
+	userScope, err := auth.VerifyUserRequestScope(r, userId, "find")
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
 		return

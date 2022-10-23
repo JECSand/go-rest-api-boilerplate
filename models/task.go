@@ -7,18 +7,26 @@ import (
 	"time"
 )
 
+type TaskStatus string
+
+const (
+	NOTSTARTED TaskStatus = "NOT_STARTED"
+	INPROGRESS TaskStatus = "IN_PROGRESS"
+	COMPLETED  TaskStatus = "COMPLETED"
+)
+
 // Task is a root struct that is used to store the json encoded data for/from a mongodb group doc.
 type Task struct {
-	Id           string    `json:"id,omitempty"`
-	Name         string    `json:"name,omitempty"`
-	Completed    bool      `json:"completed,omitempty"`
-	Due          time.Time `json:"due,omitempty"`
-	Description  string    `json:"description,omitempty"`
-	UserId       string    `json:"user_id,omitempty"`
-	GroupId      string    `json:"group_id,omitempty"`
-	LastModified time.Time `json:"last_modified,omitempty"`
-	CreatedAt    time.Time `json:"created_at,omitempty"`
-	DeletedAt    time.Time `json:"deleted_at,omitempty"`
+	Id           string     `json:"id,omitempty"`
+	Name         string     `json:"name,omitempty"`
+	Status       TaskStatus `json:"status,omitempty"`
+	Due          time.Time  `json:"due,omitempty"`
+	Description  string     `json:"description,omitempty"`
+	UserId       string     `json:"user_id,omitempty"`
+	GroupId      string     `json:"group_id,omitempty"`
+	LastModified time.Time  `json:"last_modified,omitempty"`
+	CreatedAt    time.Time  `json:"created_at,omitempty"`
+	DeletedAt    time.Time  `json:"deleted_at,omitempty"`
 }
 
 // LoadScope scopes the Task struct
@@ -92,8 +100,8 @@ func (g *Task) BuildUpdate(cur *Task) {
 	if len(g.Name) == 0 {
 		g.Name = cur.Name
 	}
-	if !g.Completed {
-		g.Completed = cur.Completed
+	if len(g.Status) == 0 {
+		g.Status = cur.Status
 	}
 	if g.Due.IsZero() {
 		g.Due = cur.Due

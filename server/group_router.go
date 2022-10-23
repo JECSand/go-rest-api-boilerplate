@@ -24,55 +24,47 @@ type groupRouter struct {
 func NewGroupRouter(router *mux.Router, a *services.TokenService, g services.GroupService, u services.UserService, t services.TaskService, f services.FileService) *mux.Router {
 	gRouter := groupRouter{a, g, u, t, f}
 	router.HandleFunc("/groups", utilities.HandleOptionsRequest).Methods("OPTIONS")
-	router.HandleFunc("/groups", a.AdminTokenVerifyMiddleWare(gRouter.GroupsShow)).Methods("GET")
+	router.HandleFunc("/groups", a.AdminTokenVerifyMiddleWare(gRouter.GetGroups)).Methods("GET")
 	router.HandleFunc("/groups", a.RootAdminTokenVerifyMiddleWare(gRouter.CreateGroup)).Methods("POST")
 	router.HandleFunc("/groups/{groupId}", utilities.HandleOptionsRequest).Methods("OPTIONS")
-	router.HandleFunc("/groups/{groupId}", a.AdminTokenVerifyMiddleWare(gRouter.GroupShow)).Methods("GET")
+	router.HandleFunc("/groups/{groupId}", a.AdminTokenVerifyMiddleWare(gRouter.GetGroup)).Methods("GET")
 	router.HandleFunc("/groups/{groupId}", a.RootAdminTokenVerifyMiddleWare(gRouter.DeleteGroup)).Methods("DELETE")
 	router.HandleFunc("/groups/{groupId}", a.AdminTokenVerifyMiddleWare(gRouter.ModifyGroup)).Methods("PATCH")
 	router.HandleFunc("/groups/{groupId}/users", utilities.HandleOptionsRequest).Methods("OPTIONS")
-	router.HandleFunc("/groups/{groupId}/users", a.AdminTokenVerifyMiddleWare(gRouter.GroupUsersShow)).Methods("GET")
+	router.HandleFunc("/groups/{groupId}/users", a.MemberTokenVerifyMiddleWare(gRouter.GetGroupUsers)).Methods("GET")
+	router.HandleFunc("/groups/{groupId}/tasks", a.MemberTokenVerifyMiddleWare(gRouter.GetGroupTasks)).Methods("GET")
 	return router
 }
 
-// getGroupUsers asynchronously gets a group and its users from the database
-func (gr *groupRouter) getGroupUsers(groupId string) (*groupUsersDTO, error) {
-	var dto groupUsersDTO
-	gOutCh := make(chan *models.Group)
-	gErrCh := make(chan error)
-	uOutCh := make(chan []*models.User)
-	uErrCh := make(chan error)
-	go func() {
-		reG, err := gr.gService.GroupFind(&models.Group{Id: groupId})
-		gOutCh <- reG
-		gErrCh <- err
-	}()
-	go func() {
-		reU, err := gr.uService.UsersFind(&models.User{GroupId: groupId})
-		uOutCh <- reU
-		uErrCh <- err
-	}()
-	for i := 0; i < 4; i++ {
-		select {
-		case gOut := <-gOutCh:
-			dto.Group = gOut
-		case gErr := <-gErrCh:
-			if gErr != nil {
-				return &dto, gErr
-			}
-		case uOut := <-uOutCh:
-			dto.Users = uOut
-		case uErr := <-uErrCh:
-			if uErr != nil {
-				return &dto, uErr
-			}
-		}
+// GetGroupTasks returns a groupTasksDTO
+func (gr *groupRouter) GetGroupTasks(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	var err error
+	groupId := vars["groupId"]
+	if !utilities.CheckObjectID(groupId) {
+		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: "missing groupId"})
+		return
 	}
-	return &dto, nil
+	groupId, err = auth.VerifyGroupRequestScope(r, groupId)
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
+		return
+	}
+	dto, err := gr.getGroupTasks(groupId)
+	if err != nil {
+		utilities.RespondWithError(w, http.StatusNotFound, utilities.JWTError{Message: err.Error()})
+		return
+	}
+	w = utilities.SetResponseHeaders(w, "", "")
+	w.WriteHeader(http.StatusOK)
+	if err = json.NewEncoder(w).Encode(dto); err != nil {
+		return
+	}
+	return
 }
 
-// GroupUsersShow returns a groupUsersDTO
-func (gr *groupRouter) GroupUsersShow(w http.ResponseWriter, r *http.Request) {
+// GetGroupUsers returns a groupUsersDTO
+func (gr *groupRouter) GetGroupUsers(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	var err error
 	groupId := vars["groupId"]
@@ -99,8 +91,8 @@ func (gr *groupRouter) GroupUsersShow(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-// GroupsShow returns all groups to client
-func (gr *groupRouter) GroupsShow(w http.ResponseWriter, r *http.Request) {
+// GetGroups returns all groups to client
+func (gr *groupRouter) GetGroups(w http.ResponseWriter, r *http.Request) {
 	w = utilities.SetResponseHeaders(w, "", "")
 	tokenData, err := auth.LoadTokenFromRequest(r)
 	if err != nil {
@@ -190,8 +182,8 @@ func (gr *groupRouter) ModifyGroup(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GroupShow shows a specific group
-func (gr *groupRouter) GroupShow(w http.ResponseWriter, r *http.Request) {
+// GetGroup shows a specific group
+func (gr *groupRouter) GetGroup(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	var err error
 	groupId := vars["groupId"]
@@ -285,4 +277,76 @@ func (gr *groupRouter) deleteGroupAssets(group *models.Group, users []*models.Us
 		}
 	}
 	return nil
+}
+
+// getGroupUsers asynchronously gets a group and its users from the database
+func (gr *groupRouter) getGroupUsers(groupId string) (*groupUsersDTO, error) {
+	var dto groupUsersDTO
+	gOutCh := make(chan *models.Group)
+	gErrCh := make(chan error)
+	uOutCh := make(chan []*models.User)
+	uErrCh := make(chan error)
+	go func() {
+		reG, err := gr.gService.GroupFind(&models.Group{Id: groupId})
+		gOutCh <- reG
+		gErrCh <- err
+	}()
+	go func() {
+		reU, err := gr.uService.UsersFind(&models.User{GroupId: groupId})
+		uOutCh <- reU
+		uErrCh <- err
+	}()
+	for i := 0; i < 4; i++ {
+		select {
+		case gOut := <-gOutCh:
+			dto.Group = gOut
+		case gErr := <-gErrCh:
+			if gErr != nil {
+				return &dto, gErr
+			}
+		case uOut := <-uOutCh:
+			dto.Users = uOut
+		case uErr := <-uErrCh:
+			if uErr != nil {
+				return &dto, uErr
+			}
+		}
+	}
+	return &dto, nil
+}
+
+// getGroupTasks asynchronously gets a group and its users from the database
+func (gr *groupRouter) getGroupTasks(groupId string) (*groupTasksDTO, error) {
+	var dto groupTasksDTO
+	gOutCh := make(chan *models.Group)
+	gErrCh := make(chan error)
+	uOutCh := make(chan []*models.Task)
+	uErrCh := make(chan error)
+	go func() {
+		reG, err := gr.gService.GroupFind(&models.Group{Id: groupId})
+		gOutCh <- reG
+		gErrCh <- err
+	}()
+	go func() {
+		reU, err := gr.tService.TasksFind(&models.Task{GroupId: groupId})
+		uOutCh <- reU
+		uErrCh <- err
+	}()
+	for i := 0; i < 4; i++ {
+		select {
+		case gOut := <-gOutCh:
+			dto.Group = gOut
+		case gErr := <-gErrCh:
+			if gErr != nil {
+				return &dto, gErr
+			}
+		case uOut := <-uOutCh:
+			dto.Tasks = uOut
+		case uErr := <-uErrCh:
+			if uErr != nil {
+				return &dto, uErr
+			}
+		}
+	}
+	return &dto, nil
 }

@@ -398,7 +398,7 @@ ___
             "id":  "000000000000000000000021",
             "name": "todo_name",
             "due": 2019-08-01 12:04:01 -0000 UTC,
-            "completed": false,
+            "status": "NOT_STARTED",
             "description": "Task to complete",
             "user_id": "000000000000000000000011",
             "group_id": "000000000000000000000001",
@@ -446,7 +446,7 @@ ___
     "id":  "000000000000000000000021",
     "name": "todo_name",
     "due": 2019-08-01 12:04:01 -0000 UTC,
-    "completed": false,
+    "status": "NOT_STARTED",
     "description": "Task to complete",
     "user_id": "000000000000000000000011",
     "group_id": "000000000000000000000001",
@@ -503,7 +503,7 @@ ___
    "id":  "000000000000000000000021",
    "name": "todo_name",
    "due": 2019-08-01 12:04:01 -0000 UTC,
-   "completed": false,
+   "status": "NOT_STARTED",
    "description": "Task to complete",
    "user_id": "000000000000000000000011",
    "group_id": "000000000000000000000001",
@@ -533,7 +533,7 @@ ___
     "name": "new_todo_name",
     "due": 2019-08-06 12:04:01 -0000 UTC,
     "description": "Updated Task to complete",
-    "completed": true,
+    "status": "COMPLETED",
     "user_id": "000000000000000000000011"
 }
 ```
@@ -562,7 +562,7 @@ ___
    "id":  "000000000000000000000022",
    "name": "new_todo_name",
    "due": 2019-08-01 12:04:01 -0000 UTC,
-   "completed": true,
+   "status": "COMPLETED",
    "description": "Task to complete",
    "user_id": "000000000000000000000011",
    "group_id": "000000000000000000000001",
@@ -859,6 +859,68 @@ ___
 }
 ```
 
+#### 6. Get User Tasks
+* GET - /users/{userId}/tasks
+
+##### Request
+
+***
+* Headers
+
+```
+{
+  Content-Type: application/json,
+  Auth-Token: ""
+}
+```
+
+##### Response
+
+***
+* Headers
+
+```
+{
+  Content-Type: application/json; charset=UTF-8,
+  Date: DoW, DD MMM YYYY HH:mm:SS GMT,
+  Content-Length: 0,
+  Access-Control-Allow-Headers: Content-Type, Auth-Token, API-Key,
+  Access-Control-Expose-Headers: Content-Type, Auth-Token, API-Key,
+  Access-Control-Allow-Origin: *,
+  Access-Control-Allow-Methods: GET,DELETE,POST,PATCH  
+}
+```
+
+* Body
+```
+{
+  "user": {
+    "id": "000000000000000000000012",
+    "username": "newUserName",
+    "firstname": "jane",
+    "lastname": "smith",
+    "email": "new_test@email.com",
+    "role": "member",
+    "group_id": "000000000000000000000001",
+    "last_modified": 2019-06-07 20:17:14.630917778 +0000 UTC,
+    "created_at": 2019-06-07 20:17:14.630917778 +0000 UTC
+  },
+  "tasks": [
+    {
+        "id": "000000000000000000000022",
+        "name": "task_name",
+        "status": "NOT_STARTED",
+        "due": 2019-06-07 20:28:09.400248747 +0000 UTC,
+        "description": "Task to complete",
+        "user_id": "000000000000000000000012",
+        "group_id": "000000000000000000000001",
+        "last_modified": 2019-06-07 20:28:09.400248747 +0000 UTC,
+        "created_at": 2019-06-07 20:28:09.400248747 +0000 UTC
+    }
+  ]
+}
+```
+
 ### IV) User Group Routes (Admins Only)
 
 ___
@@ -1134,6 +1196,63 @@ ___
       "group_id": "000000000000000000000002",
       "last_modified": 2019-06-07 20:17:14.630917778 +0000 UTC,
       "created_at": 2019-06-07 20:17:14.630917778 +0000 UTC
+    }
+  ]
+}
+```
+
+#### 7. Get Group Tasks
+* GET - /groups/{groupId}/tasks
+
+##### Request
+
+***
+* Headers
+
+```
+{
+  Content-Type: application/json,
+  Auth-Token: ""
+}
+```
+
+##### Response
+
+***
+* Headers
+
+```
+{
+  Content-Type: application/json; charset=UTF-8,
+  Date: DoW, DD MMM YYYY HH:mm:SS GMT,
+  Content-Length: 0,
+  Access-Control-Allow-Headers: Content-Type, Auth-Token, API-Key,
+  Access-Control-Expose-Headers: Content-Type, Auth-Token, API-Key,
+  Access-Control-Allow-Origin: *,
+  Access-Control-Allow-Methods: GET,DELETE,POST,PATCH  
+}
+```
+
+* Body
+```
+{
+  "group": {
+    "id": "000000000000000000000002",
+    "name": "newGroup",    
+    "last_modified": 2019-06-07 20:18:15.145971952 +0000 UTC,
+    "creation_datetime": 2019-06-07 20:18:15.145971952 +0000 UTC
+  },
+  "tasks": [
+    {
+        "id": "000000000000000000000022",
+        "name": "task_name",
+        "status": "NOT_STARTED",
+        "due": 2019-06-07 20:28:09.400248747 +0000 UTC,
+        "description": "Task to complete",
+        "user_id": "000000000000000000000001",
+        "group_id": "000000000000000000000002",
+        "last_modified": 2019-06-07 20:28:09.400248747 +0000 UTC,
+        "created_at": 2019-06-07 20:28:09.400248747 +0000 UTC
     }
   ]
 }

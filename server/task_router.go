@@ -32,7 +32,7 @@ func NewTaskRouter(router *mux.Router, a *services.TokenService, t services.Task
 // TasksShow returns all tasks to client
 func (gr *taskRouter) TasksShow(w http.ResponseWriter, r *http.Request) {
 	var filter models.Task
-	userScope, err := auth.VerifyRequestScope(r)
+	userScope, err := auth.VerifyRequestScope(r, "find")
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
 		return
@@ -66,7 +66,7 @@ func (gr *taskRouter) CreateTask(w http.ResponseWriter, r *http.Request) {
 		utilities.RespondWithError(w, http.StatusBadRequest, utilities.JWTError{Message: err.Error()})
 		return
 	}
-	userScope, err := auth.VerifyRequestScope(r)
+	userScope, err := auth.VerifyRequestScope(r, "create")
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
 		return
@@ -144,7 +144,7 @@ func (gr *taskRouter) TaskShow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var filter models.Task
-	userScope, err := auth.VerifyRequestScope(r)
+	userScope, err := auth.VerifyRequestScope(r, "find")
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
 		return
@@ -173,7 +173,7 @@ func (gr *taskRouter) DeleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var filter models.Task
-	userScope, err := auth.VerifyRequestScope(r)
+	userScope, err := auth.VerifyRequestScope(r, "update")
 	if err != nil {
 		utilities.RespondWithError(w, http.StatusUnauthorized, utilities.JWTError{Message: err.Error()})
 		return

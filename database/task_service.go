@@ -74,6 +74,7 @@ func (p *TaskService) TaskCreate(g *models.Task) (*models.Task, error) {
 	if err != nil {
 		return nil, err
 	}
+	gm.Status = models.NOTSTARTED
 	gm, err = p.taskHandler.InsertOne(gm)
 	if err != nil {
 		return nil, err
