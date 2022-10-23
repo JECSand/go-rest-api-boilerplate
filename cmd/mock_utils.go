@@ -98,7 +98,7 @@ func createTestTask(ta App, taskType int) *models.Task {
 	if taskType == 1 {
 		task.Id = "000000000000000000000021"
 		task.Name = "testTask"
-		task.Completed = false
+		task.Status = models.NOTSTARTED
 		task.Due = now.Add(time.Hour * 24).UTC()
 		task.Description = "Updated Task to complete"
 		task.UserId = "000000000000000000000012"
@@ -108,7 +108,7 @@ func createTestTask(ta App, taskType int) *models.Task {
 	} else {
 		task.Id = "000000000000000000000022"
 		task.Name = "testTask2"
-		task.Completed = false
+		task.Status = models.NOTSTARTED
 		task.Due = now.Add(time.Hour * 48).UTC()
 		task.Description = "Updated Task to complete2"
 		task.UserId = "000000000000000000000013"
@@ -163,7 +163,7 @@ func getTestTaskPayload(tCase string) []byte {
 	switch tCase {
 	case "CREATE":
 		tTask.Name = "testTask"
-		tTask.Completed = false
+		tTask.Status = models.NOTSTARTED
 		tTask.Due = now.Add(time.Hour * 24).UTC()
 		tTask.Description = "Updated Task to complete"
 		tTask.UserId = "000000000000000000000012"
@@ -172,7 +172,7 @@ func getTestTaskPayload(tCase string) []byte {
 		return b
 	case "UPDATE":
 		tTask.Name = "NewTestTask"
-		tTask.Completed = true
+		tTask.Status = models.COMPLETED
 		tTask.Description = "Updated Task to complete"
 		tTask.UserId = "000000000000000000000012"
 		tTask.GroupId = "000000000000000000000002"

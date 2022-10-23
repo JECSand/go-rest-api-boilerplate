@@ -45,9 +45,6 @@ func (g *User) LoadScope(scopeUser *User, valCase string) {
 	case "find":
 		if !scopeUser.RootAdmin {
 			g.GroupId = scopeUser.GroupId
-			if scopeUser.Role != "admin" {
-				g.Id = scopeUser.Id
-			}
 		}
 	}
 	return

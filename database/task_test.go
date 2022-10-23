@@ -18,7 +18,7 @@ func Test_TaskCreate(t *testing.T) {
 		// Here we're declaring each unit test input and output data as defined before
 		{
 			"success",
-			&models.Task{Id: "000000000000000000000022", Name: "Task1"},
+			&models.Task{Id: "000000000000000000000022", Name: "Task1", Status: models.NOTSTARTED},
 			false,
 			&models.Task{
 				Id:      "000000000000000000000022",
@@ -44,9 +44,9 @@ func Test_TaskCreate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			testService := initTestTaskService()
-			//fmt.Println("\n\nPRE CREATE: ", tt.task)
+			fmt.Println("\n\nPRE CREATE: ", tt.task)
 			got, err := testService.TaskCreate(tt.task)
-			//fmt.Println("\nPOST CREATE: ", got)
+			fmt.Println("\nPOST CREATE: ", got)
 			// Checking the error
 			if (err != nil) != tt.wantErr {
 				t.Errorf("TaskService.TaskCreate() error = %v, wantErr %v", err, tt.wantErr)
@@ -61,7 +61,7 @@ func Test_TaskCreate(t *testing.T) {
 			var failMsg string
 			switch tt.name {
 			case "success":
-				if got.Id != tt.want.Id || got.CreatedAt.IsZero() { // Asserting whether we get the correct wanted value
+				if got.Id != tt.want.Id || got.CreatedAt.IsZero() || got.Status != tt.want.Status { // Asserting whether we get the correct wanted value
 					failMsg = fmt.Sprintf("TaskService.TaskCreate() = %v, want %v", got, tt.want)
 				}
 			}
@@ -169,15 +169,21 @@ func Test_TaskUpdate(t *testing.T) {
 		// Here we're declaring each unit test input and output data as defined before
 		{
 			"complete task",
-			&models.Task{Id: "000000000000000000000022", Name: "Task1", Completed: true},
+			&models.Task{Id: "000000000000000000000022", Name: "Task1", Status: models.COMPLETED},
 			false,
-			&models.Task{Id: "000000000000000000000022", Completed: true},
+			&models.Task{Id: "000000000000000000000022", Status: models.COMPLETED},
+		},
+		{
+			"in progress task",
+			&models.Task{Id: "000000000000000000000022", Name: "Task1", Status: models.INPROGRESS},
+			false,
+			&models.Task{Id: "000000000000000000000022", Status: models.INPROGRESS},
 		},
 		{
 			"invalid user id",
 			&models.Task{Id: "000000000000000000000022", Name: "Task1"},
 			true,
-			&models.Task{Id: "000000000000000000000022", UserId: "000000000000000000000002", Completed: true},
+			&models.Task{Id: "000000000000000000000022", UserId: "000000000000000000000002", Status: models.COMPLETED},
 		},
 	}
 	// Iterating over the previous test slice
@@ -193,10 +199,15 @@ func Test_TaskUpdate(t *testing.T) {
 			var failMsg string
 			switch tt.name {
 			case "complete task":
-				if !got.Completed || got.Name != tt.want.Name { // Asserting whether we get the correct wanted value
+				if got.Status != models.COMPLETED || got.Name != tt.want.Name { // Asserting whether we get the correct wanted value
+					failMsg = fmt.Sprintf("TaskService.TaskUpdate() = %v, want %v", got.Name, tt.want.Name)
+				}
+			case "in progress task":
+				if got.Status != models.INPROGRESS || got.Name != tt.want.Name { // Asserting whether we get the correct wanted value
 					failMsg = fmt.Sprintf("TaskService.TaskUpdate() = %v, want %v", got.Name, tt.want.Name)
 				}
 			}
+
 			if failMsg != "" {
 				t.Errorf(failMsg)
 			}
