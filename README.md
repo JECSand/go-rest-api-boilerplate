@@ -1,4 +1,4 @@
-# go-web-app-boilerplate
+# go-rest-api-boilerplate
 
 A REST API Boilerplate written in Go.
 
