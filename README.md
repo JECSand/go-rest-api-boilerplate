@@ -2,7 +2,6 @@
 
 A REST API Boilerplate written in Go.
 
-
 [![Go Report Card](https://goreportcard.com/badge/github.com/JECSand/go-rest-api-boilerplate)](https://goreportcard.com/report/github.com/JECSand/go-rest-api-boilerplate)
 
 * Author(s): John Connor Sanders
